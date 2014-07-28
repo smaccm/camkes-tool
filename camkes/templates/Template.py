@@ -131,6 +131,7 @@ TEMPLATES = {
             },
         },
         Key('Makefile'):'Makefile',
+        Key('linker'):'linker.lds',
         Key('capdl'):'capdl-spec.cdl',
         Key('label-mapping'):'label-mapping.json',
     },
@@ -140,8 +141,83 @@ TEMPLATES = {
     'architecture-semantics':{ # Isabelle ADL formalism
         Key('theory'):'arch-definitions.thy',
     },
+    'eChronos':{ # eChronos RTOS
+        Key('%(connection)s', lambda x: x.type.name == 'eChronosDirectCall'): {
+            'from':{
+                'source':'echronos/eChronosDirectCall-from.template.c',
+            },
+            'to':{
+                'source':'echronos/eChronosDirectCall-to.template.c',
+            },
+        },
+        Key('%(connection)s', lambda x: x.type.name == 'eChronosAsynch'): {
+            'from':{
+                'source':'echronos/eChronosAsynch-from.template.c',
+            },
+            'to':{
+                'source':'echronos/eChronosAsynch-to.template.c',
+            },
+        },
+    },
+    'autocorres':{ # AutoCorres-based C code proofs
+        Key('%(connection)s', lambda x: x.type.name == 'seL4AsynchNative'):{
+            'to':{
+                'theory':'autocorres/AsynchNativeTo.template.thy',
+            },
+            'from':{
+                'theory':'autocorres/AsynchNativeFrom.template.thy',
+            },
+        },
+        Key('%(connection)s', lambda x: x.type.name == 'seL4SharedData'):{
+            'to':{
+                'theory':'autocorres/SharedDataTo.template.thy',
+            },
+            'from':{
+                'theory':'autocorres/SharedDataFrom.template.thy',
+            },
+        },
+        Key('%(connection)s', lambda x: x.type.name == 'seL4RPCSimple'):{
+            'from':{
+                'theory':'autocorres/RPCSimpleFrom.template.thy',
+            },
+            'to':{
+                'theory':'autocorres/RPCSimpleTo.template.thy',
+            },
+        },
+    },
     'GraphViz':{
         Key('graph'):'graph.dot',
+    },
+    'linux':{
+        Key('%(instance)s'):{
+            'source':'linux/component.template.c',
+            'header':'linux/component.template.h',
+        },
+        Key('%(connection)s', lambda x: x.type.name == 'linuxMQ'):{
+            'from':{
+                'source':'linux/linuxMQ-from.template.c',
+            },
+            'to':{
+                'source':'linux/linuxMQ-to.template.c',
+            },
+        },
+        Key('%(connection)s', lambda x: x.type.name == 'linuxMQEmpty'):{
+            'from':{
+                'source':'linux/linuxMQEmpty-from.template.c',
+            },
+            'to':{
+                'source':'linux/linuxMQEmpty-to.template.c',
+            },
+        },
+        Key('%(connection)s', lambda x: x.type.name == 'linuxMmap'):{
+            'from':{
+                'source':'linux/linuxMmap-from.template.c',
+            },
+            'to':{
+                'source':'linux/linuxMmap-to.template.c',
+            },
+        },
+        Key('wrapper'):'linux/wrapper.template.sh',
     },
 }
 PLATFORMS = TEMPLATES.keys()
@@ -151,6 +227,7 @@ class Templates(object):
         assert platform in TEMPLATES
         self.base = TEMPLATES[platform]
         self.data = kwargs
+        self.combined = None
         self.roots = [os.path.abspath(os.path.dirname(__file__))]
 
     def add_root(self, root):
@@ -176,7 +253,7 @@ class Templates(object):
                 self.type = FakeType()
         fc = FakeConnection()
         for key in self.base:
-            if key.matches('%(connection)s', fc):
+            if isinstance(key, Key) and key.matches('%(connection)s', fc):
                 k = key
                 break
         if not k:
@@ -206,9 +283,11 @@ class Templates(object):
                     if atoms[0] == k:
                         return find(v, atoms[1:])
                 else:
-                    for c in combinations(self.data):
+                    for c in self.combined:
                         key = k.specialise(c)
                         if key.matches(atoms[0], entity):
                             return find(v, atoms[1:])
         atoms = path.split('.')
+        if self.combined is None:
+            self.combined = list(combinations(self.data))
         return find(self.base, atoms)

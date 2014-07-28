@@ -249,3 +249,5 @@ connector seL4RPCSimple {
 	to Procedure provider_inf;
 }
 
+import "linux_connector.camkes";
+import "echronos_connector.camkes";

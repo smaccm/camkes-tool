@@ -126,6 +126,66 @@ endif
 /*- do to_names.append(('%s_%s' % (c.to_instance.name, c.to_interface.name))) -*/
 /*- endif -*/
 
+ifeq (${CONFIG_CAMKES_PRUNE_GENERATED},y)
+/*# We need to provide specialised targets for the pruned c_pp files *and* o
+ *# files so the generic targets in tools/common/camkes.mk won't match.
+ #*/
+
+/*# Pruned C files (from) #*/
+/*- set prefix = '$(abspath ${BUILD_DIR})/src/%s/generated/%s_%s' % (c.from_instance.name, c.from_interface.name, c.type.name) -*/
+/*? prefix ?*/.o: /*? prefix ?*/.pruned.c_pp
+	@$(if $(filter-out 0,${V}),$(warning Using CAmkES generic .o target),)
+	@echo " [CC] $(notdir $@)"
+	$(Q)mkdir -p $(dir $@)
+	$(Q)$(CC) -x c $(CFLAGS) $(foreach v,$(filter-out $<,$^),$(patsubst %,-I%,$(abspath $(dir ${v})))) -c $< -o $@
+/*? prefix ?*/.pruned.c_pp: /*? prefix ?*/.c_pp
+	@echo " [PRUNE] $(notdir $@)"
+	${Q}prune --keep /*? c.from_interface.name ?*/__run \
+	/*- if c.from_interface in c.from_instance.type.emits -*/ \
+	    --keep /*? c.from_interface.name ?*/_emit_underlying \
+	/*- elif c.from_interface in c.from_instance.type.dataports -*/ \
+	    --keep /*? c.from_interface.name ?*/_wrap_ptr \
+	    --keep /*? c.from_interface.name ?*/_unwrap_ptr \
+	/*- elif c.from_interface in c.from_instance.type.uses -*/ \
+	    /*- for m in c.from_interface.type.methods -*/ \
+	        --keep /*? c.from_interface.name ?*/_/*? m.name ?*/ \
+	    /*- endfor -*/ \
+	/*- endif -*/ \
+	$(foreach i,${PRUNER_BLACKLIST},--blacklist $i) --output "$@" "$<"
+
+/*# Pruned C files (to) #*/
+/*- set prefix = '$(abspath ${BUILD_DIR})/src/%s/generated/%s_%s' % (c.to_instance.name, c.to_interface.name, c.type.name) -*/
+/*? prefix ?*/.o: /*? prefix ?*/.pruned.c_pp
+	@$(if $(filter-out 0,${V}),$(warning Using CAmkES generic .o target),)
+	@echo " [CC] $(notdir $@)"
+	$(Q)mkdir -p $(dir $@)
+	$(Q)$(CC) -x c $(CFLAGS) $(foreach v,$(filter-out $<,$^),$(patsubst %,-I%,$(abspath $(dir ${v})))) -c $< -o $@
+/*? prefix ?*/.pruned.c_pp: /*? prefix ?*/.c_pp
+	@echo " [PRUNE] $(notdir $@)"
+	${Q}prune --keep /*? c.to_interface.name ?*/__run \
+	/*- if c.to_interface in c.to_instance.type.consumes -*/ \
+	    --keep /*? c.to_interface.name ?*/_poll \
+	    --keep /*? c.to_interface.name ?*/_wait \
+	/*- elif c.to_interface in c.to_instance.type.dataports -*/ \
+	    --keep /*? c.to_interface.name ?*/_wrap_ptr \
+	    --keep /*? c.to_interface.name ?*/_unwrap_ptr \
+	/*- elif c.to_interface in c.to_instance.type.provides -*/ \
+	    /*# nothing extra required #*/ \
+	/*- endif -*/ \
+	$(foreach i,${PRUNER_BLACKLIST},--blacklist $i) --output "$@" "$<"
+endif
+
+/*# Theory generation #*/
+/*- set fromthy = '$(abspath ${BUILD_DIR})/thy/%s/generated/%s.thy' % (c.from_instance.name, c.from_interface.name) -*/
+/*? rule_gen(fromthy, ' '.join(imported), '%s.from.theory' % c.name, platform='autocorres', preprocessor='${TPP} --in-place "$@"') ?*/
+ifeq (${CONFIG_CAMKES_THYS},y)
+${TARGETS}: /*? fromthy ?*/
+endif
+/*- set tothy = '$(abspath ${BUILD_DIR})/thy/%s/generated/%s.thy' % (c.to_instance.name, c.to_interface.name) -*/
+/*? rule_gen(tothy, ' '.join(imported), '%s.to.theory' % c.name, platform='autocorres', preprocessor='${TPP} --in-place "$@"') ?*/
+ifeq (${CONFIG_CAMKES_THYS},y)
+${TARGETS}: /*? tothy ?*/
+endif
 /*- endfor -*/
 
 # Each component file may depend on the per-component generated header.
@@ -162,7 +222,8 @@ $(/*? i.name ?*/_CFILES:%.c=%.c_pp): ${/*? i.name ?*/_HFILES} ${/*? i.name ?*/_C
     ${ENDGROUP} \
     -static -nostdlib \
     -u _camkes_start \
-    -e _camkes_start
+    -e _camkes_start \
+    -Wl,--script=${BUILD_DIR}/linker.lds
 
 /*# Only incrementally link if this instance is going on to become part of a
  *# group.
@@ -213,7 +274,7 @@ $(firstword ${TARGETS}): /*- for g in groups -*/ /*- set p = Perspective(group=g
 	$(Q)camkes.sh runner \
         ${CAMKES_FLAGS} \
         --file "${SOURCE_DIR}/${ADL}" \
-        --import-path ${PWD}/tools/camkes/include/builtin \
+        --import-path ${SOURCE_DIR}/../../tools/camkes/include/builtin \
         --item capdl \
         /*- for g in groups -*/ \
             /*- set p = Perspective(group=g) -*/ \
@@ -265,6 +326,9 @@ endif
          *# user-provided symbols.
          #*/ \
         --keep-global-symbol "" \
+        \
+        /*# Rename the DMA pools so they don't collide. #*/ \
+        --redefine-sym "/*? pre['dma_pool_symbol'] ?*/"="/*? post['dma_pool_symbol'] ?*/" \
         \
         /*# Rename dataports so they don't collide. These symbols can be
          *# localised, but they need to be uniquely locatable for the filter

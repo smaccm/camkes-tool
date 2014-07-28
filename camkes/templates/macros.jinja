@@ -15,8 +15,7 @@
         *
     /*- endif -*/
     /*? param.name ?*/
-/*- endmacro -*/
-
+/*- endmacro -*/ 
 /*- macro _parameter_address(param) -*/
     /*- if param.direction.direction == 'in' and param.type.type != 'string' -*/
         &
@@ -94,12 +93,14 @@
 /*- macro thread_stack(sym) -*/
     char /*? sym ?*/[ROUND_UP_UNSAFE(CONFIG_CAMKES_DEFAULT_STACK_SIZE, PAGE_SIZE_4K) + PAGE_SIZE_4K * 2]
         __attribute__((externally_visible))
+        __attribute__((section("guarded")))
         __attribute__((aligned(PAGE_SIZE_4K)));
 /*- endmacro -*/
 
 /*- macro ipc_buffer(sym) -*/
     char /*? sym ?*/[PAGE_SIZE_4K * 3]
         __attribute__((externally_visible))
+        __attribute__((section("guarded")))
         __attribute__((aligned(PAGE_SIZE_4K)));
 /*- endmacro -*/
 
