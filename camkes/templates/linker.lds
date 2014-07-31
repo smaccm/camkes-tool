@@ -26,6 +26,12 @@ SECTIONS {
         *(.rodata*)
     }
 
+    /*- if arch == 'arm' -*/
+    PROVIDE_HIDDEN (__exidx_start = .);
+    .ARM.exidx   : { *(.ARM.exidx* .gnu.linkonce.armexidx.*) }
+    PROVIDE_HIDDEN (__exidx_end = .);
+    /*- endif -*/
+
     /* Data / BSS */
     .data : ALIGN(4096) {
         *(.data)
