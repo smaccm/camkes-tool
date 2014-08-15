@@ -23,6 +23,7 @@
 #include <sel4platsupport/platsupport.h>
 #include <camkes/allocator.h>
 #include <camkes/dataport.h>
+#include <camkes/dma.h>
 #include <camkes/tls.h>
 #include <stdlib.h>
 #include <sync/sem-bare.h>
@@ -56,6 +57,63 @@ const char *get_instance_name(void) {
     static const char name[] = "/*? me.name ?*/";
     return name;
 }
+
+/* DMA functionality. */
+
+/*# Determine the size of the DMA pool. Note that we make no attempt to
+ *# suppress this attribute being generated as a user-accessible variable at
+ *# the top of this file. If the component actually has a declared attribute
+ *# 'dma_pool' then they will get access to this variable at runtime.
+ #*/
+/*- set dma_pool = [] -*/
+/*- if configuration -*/
+    /*- for s in configuration.settings -*/
+        /*- if s.instance == me.name and s.attribute == 'dma_pool' -*/
+            /*- do dma_pool.append(s.value) -*/
+        /*- endif -*/
+    /*- endfor -*/
+/*- endif -*/
+/*- if dma_pool -*/
+    /*- set dma_pool = dma_pool[0] -*/
+/*- else -*/
+    /*# default #*/
+    /*- set dma_pool = 0 -*/
+/*- endif -*/
+
+/*- set p = Perspective() -*/
+static char /*? p['dma_pool_symbol'] ?*/[ROUND_UP_UNSAFE(/*? dma_pool ?*/, PAGE_SIZE_4K)];
+
+#ifdef ARCH_ARM
+    #define seL4_Page_GetAddress seL4_ARM_Page_GetAddress
+    #define seL4_Page_GetAddress_t seL4_ARM_Page_GetAddress_t
+#elif defined(ARCH_IA32)
+    #define seL4_Page_GetAddress seL4_IA32_Page_GetAddress
+    #define seL4_Page_GetAddress_t seL4_IA32_Page_GetAddress_t
+#else
+    #error "Unsupported architecture"
+#endif
+
+/*- set get_paddr = c_symbol('get_paddr') -*/
+uintptr_t /*? get_paddr ?*/(void *ptr) {
+    uintptr_t base UNUSED = (uintptr_t)ptr & ~MASK(PAGE_BITS_4K);
+    uintptr_t offset UNUSED = (uintptr_t)ptr & MASK(PAGE_BITS_4K);
+    /*- for i in range(int(ROUND_UP(dma_pool, PAGE_SIZE) / PAGE_SIZE)) -*/
+        /*- if not loop.first -*/
+            else
+        /*- endif -*/
+        if (base == (uintptr_t)/*? p['dma_pool_symbol'] ?*/ + /*? i ?*/ * PAGE_SIZE_4K) {
+            /*- set p = Perspective(dma_frame_index=i) -*/
+            /*- set frame = alloc(p['dma_frame_symbol'], seL4_FrameObject) -*/
+            seL4_Page_GetAddress_t res = seL4_Page_GetAddress(/*? frame ?*/);
+            assert(res.error == 0);
+            return res.paddr + offset;
+        }
+    /*- endfor -*/
+    return (uintptr_t)NULL;
+}
+
+#undef seL4_Page_GetAddress
+#undef seL4_Page_GetAddress_t
 
 /* Mutex functionality. */
 /*- for m in me.type.mutexes -*/
@@ -117,7 +175,13 @@ int /*? s.name ?*/_post(void) {
  */
 /*- set init = c_symbol() -*/
 static void /*? init ?*/(void) {
-    int UNUSED res;
+    int res = camkes_dma_init(/*? p['dma_pool_symbol'] ?*/,
+        ROUND_UP(/*? dma_pool ?*/, PAGE_SIZE_4K) / PAGE_SIZE_4K,
+        /*? get_paddr ?*/);
+    if (res != 0) {
+        assert(!"DMA initialisation failed");
+        abort();
+    }
     debug_set_id_fn(get_instance_name);
     /*- for m in me.type.mutexes -*/
         res = mutex_/*? m.name ?*/_init();

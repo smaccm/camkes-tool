@@ -266,6 +266,9 @@ endif
          #*/ \
         --keep-global-symbol "" \
         \
+        /*# Rename the DMA pools so they don't collide. #*/ \
+        --redefine-sym "/*? pre['dma_pool_symbol'] ?*/"="/*? post['dma_pool_symbol'] ?*/" \
+        \
         /*# Rename dataports so they don't collide. These symbols can be
          *# localised, but they need to be uniquely locatable for the filter
          *# that ensures they map to the same underlying frame.
