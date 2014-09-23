@@ -11,9 +11,9 @@
 /*- set thy = splitext(os.path.basename(options.outfile.name))[0] -*/
 (*<*)
 theory /*? thy ?*/ imports
-  "../../c-parser/CTranslation"
-  "../../autocorres/AutoCorres"
-  "../../autocorres/NonDetMonadEx"
+  "../../tools/c-parser/CTranslation"
+  "../../tools/autocorres/AutoCorres"
+  "../../tools/autocorres/NonDetMonadEx"
 begin
 
 (* THIS THEORY IS GENERATED. DO NOT EDIT. *)
