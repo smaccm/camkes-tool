@@ -140,7 +140,7 @@ ifeq (${CONFIG_CAMKES_PRUNE_GENERATED},y)
 	$(Q)$(CC) -x c $(CFLAGS) $(foreach v,$(filter-out $<,$^),$(patsubst %,-I%,$(abspath $(dir ${v})))) -c $< -o $@
 /*? prefix ?*/.pruned.c_pp: /*? prefix ?*/.c_pp
 	@echo " [PRUNE] $(notdir $@)"
-	${Q}prune --keep /*? c.from_interface.name ?*/__run \
+	${Q}LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONFIG_CAMKES_LLVM_PATH}/lib prune --keep /*? c.from_interface.name ?*/__run \
 	/*- if c.from_interface in c.from_instance.type.emits -*/ \
 	    --keep /*? c.from_interface.name ?*/_emit_underlying \
 	/*- elif c.from_interface in c.from_instance.type.dataports -*/ \
@@ -162,7 +162,7 @@ ifeq (${CONFIG_CAMKES_PRUNE_GENERATED},y)
 	$(Q)$(CC) -x c $(CFLAGS) $(foreach v,$(filter-out $<,$^),$(patsubst %,-I%,$(abspath $(dir ${v})))) -c $< -o $@
 /*? prefix ?*/.pruned.c_pp: /*? prefix ?*/.c_pp
 	@echo " [PRUNE] $(notdir $@)"
-	${Q}prune --keep /*? c.to_interface.name ?*/__run \
+	${Q}LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${CONFIG_CAMKES_LLVM_PATH}/lib prune --keep /*? c.to_interface.name ?*/__run \
 	/*- if c.to_interface in c.to_instance.type.consumes -*/ \
 	    --keep /*? c.to_interface.name ?*/_poll \
 	    --keep /*? c.to_interface.name ?*/_wait \
