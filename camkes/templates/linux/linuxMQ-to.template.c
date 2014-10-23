@@ -8,7 +8,6 @@
  * @TAG(NICTA_BSD)
  */
 
-/*- import 'macros.jinja' as macros -*/
 #include <assert.h>
 #include <camkes/channel.h>
 #include <camkes/marshal.h>

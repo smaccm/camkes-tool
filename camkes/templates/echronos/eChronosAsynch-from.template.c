@@ -8,7 +8,6 @@
  * @TAG(NICTA_BSD)
  */
 
-/*- import 'macros.jinja' as macros -*/
 #include </*? me.from_instance.type.name ?*/.h>
 
 /*? macros.show_includes(me.from_instance.type.includes) ?*/
