@@ -152,6 +152,8 @@ def new_context(entity, configuration, obj_space, cap_space, shmem, **kwargs):
         'str':str,
         'splitext':os.path.splitext,
         'arch':os.environ.get('ARCH', ''),
+        'ord':ord,
+        'chr':chr,
 
         # Allocation pools. In general, do not touch these in templates, but
         # interact with them through the alloc* functions. They are only in the
