@@ -12,9 +12,12 @@
 
 import os, re, subprocess
 import camkes.ast as AST
-from capdl import Cap, CNode, TCB, page_table_index, page_index
+from capdl import Cap, CNode, TCB, SC, page_table_index, page_index
 from camkes.internal.memoization import memoized
 from NameMangling import Perspective
+
+import code
+from Context import _breakpoint
 
 PAGE_SIZE = 4096 # bytes
 IPC_BUFFER_SIZE = 512 # bytes
@@ -205,6 +208,29 @@ def set_tcb_caps(ast, obj_space, cspaces, elfs, *_):
                 tcb['ipc_buffer_slot'] = Cap(frame, True, True, True) # RWG
 
             # Currently no fault EP (fault_ep_slot).
+
+            # add SC
+            assembly = find_assembly(ast) 
+            settings = assembly.configuration.settings if assembly.configuration is not None else []
+            sc = None
+            sc_name = perspective['sc']
+            # first check if this thread has been configured to not have an SC
+            sc_attribute = perspective['sc_attribute']
+            name = perspective['instance']
+            sc_attributes = filter(lambda x: \
+                x.instance == name and x.attribute == sc_attribute,
+                settings)
+            if len(sc_attributes) != 1 or sc_attributes[0].value != '"none"':
+                scs = filter(lambda x: x.name == sc_name, obj_space.spec.objs) 
+                if len(scs) > 1:
+                    raise Exception('Multiple SCs found for %s' % group)
+                elif len(scs) == 1:
+                    sc, = scs
+                    tcb['sc_slot'] = Cap(sc)
+                # If no SC was found then this is a passive thread, no problem.
+
+            # add temp_fault_ep_slot
+
 
 def collapse_shared_frames(ast, obj_space, cspaces, elfs, *_):
     """Find regions in virtual address spaces that are intended to be backed by
@@ -592,6 +618,9 @@ def tcb_default_priorities(ast, obj_space, cspaces, elfs, profiler, options):
 
     for t in filter(lambda x: isinstance(x, TCB), obj_space):
         t.prio = options.default_priority
+        t.max_prio = options.default_max_priority
+        t.crit = options.default_criticality
+        t.max_crit = options.default_max_criticality
 
 def tcb_priorities(ast, obj_space, cspaces, *_):
     ''' Override a TCB's default priority if the user has specified this in an
@@ -629,6 +658,43 @@ def tcb_priorities(ast, obj_space, cspaces, *_):
             prio = prios[0].value
 
             tcb.prio = prio
+
+            # Find the max_priority if it was set.
+            max_prio_attribute = perspective['max_priority_attribute']
+            name = perspective['instance']
+            max_prios = filter(lambda x: \
+                x.instance == name and x.attribute == max_prio_attribute,
+                settings)
+            if len(max_prios) != 1:
+                continue
+            max_prio = max_prios[0].value
+
+            tcb.max_prio = max_prio
+
+            # Find the criticality if it was set.
+            crit_attribute = perspective['criticality_attribute']
+            name = perspective['instance']
+            crits = filter(lambda x: \
+                x.instance == name and x.attribute == crit_attribute,
+                settings)
+            if len(crits) != 1:
+                continue
+            crit = crits[0].value
+
+            tcb.crit = crit
+
+            # Find the max_criticality if it was set.
+            max_crit_attribute = perspective['max_criticality_attribute']
+            name = perspective['instance']
+            max_crits = filter(lambda x: \
+                x.instance == name and x.attribute == max_crit_attribute,
+                settings)
+            if len(max_crits) != 1:
+                continue
+            max_crit = max_crits[0].value
+
+            tcb.max_crit = max_crit
+
 
 def tcb_domains(ast, obj_space, cspaces, *_):
     '''Set the domain of a TCB if the user has specified this in an
@@ -670,6 +736,92 @@ def remove_tcb_caps(ast, obj_space, cspaces, elfs, profiler, options):
                 if isinstance(space.cnode[slot].referent, TCB):
                     del space.cnode[slot]
 
+
+def sc_default_properties(ast, obj_space, cspaces, elfs, profiler, options):
+    '''Set up default scheduling context properties. Note this filter needs to operate
+    *before* sc_properties.'''
+
+    for s in filter(lambda x: isinstance(x, SC), obj_space):
+        s.period = options.default_period
+        s.deadline = options.default_deadline
+        s.exec_req = options.default_exec_req
+        # s.flags = options.default_flags
+
+def sc_properties(ast, obj_space, cspaces, *_):
+    ''' Override an SC's default properties if the user has specified this in an
+    attribute.'''
+
+    assembly = find_assembly(ast)
+
+    if assembly.configuration is None or \
+            len(assembly.configuration.settings) == 0:
+        # We have nothing to do if no properties were set.
+        return
+
+    settings = assembly.configuration.settings
+
+    for group, space in cspaces.items():
+        cnode = space.cnode
+        for cap in cnode.slots.values():
+
+            if cap is None:
+                continue
+            sc = cap.referent
+            if not isinstance(sc, SC):
+                continue
+
+            perspective = Perspective(group=group, sc=sc.name)
+
+            # Find the period if it was set.
+            period_attribute = perspective['period_attribute']
+            name = perspective['instance']
+            periods = filter(lambda x: \
+                x.instance == name and x.attribute == period_attribute,
+                settings)
+            if len(periods) != 1:
+                continue
+            period = periods[0].value
+
+            sc.period = period
+
+            # Find the deadline if it was set.
+            deadline_attribute = perspective['deadline_attribute']
+            name = perspective['instance']
+            deadlines = filter(lambda x: \
+                x.instance == name and x.attribute == deadline_attribute,
+                settings)
+            if len(deadlines) != 1:
+                continue
+            deadline = deadlines[0].value
+
+            sc.deadline = deadline
+
+            # Find the exec_req if it was set.
+            exec_req_attribute = perspective['exec_req_attribute']
+            name = perspective['instance']
+            exec_reqs = filter(lambda x: \
+                x.instance == name and x.attribute == exec_req_attribute,
+                settings)
+            if len(exec_reqs) != 1:
+                continue
+            exec_req = exec_reqs[0].value
+
+            sc.exec_req = exec_req
+
+            # Find the flags if it was set.
+            flags_attribute = perspective['flags_attribute']
+            name = perspective['instance']
+            flagss = filter(lambda x: \
+                x.instance == name and x.attribute == flags_attribute,
+                settings)
+            if len(flagss) != 1:
+                continue
+            flags = flagss[0].value
+
+            sc.flags = flags
+
+
+
 CAPDL_FILTERS = [
     set_tcb_info,
     set_tcb_caps,
@@ -681,4 +833,6 @@ CAPDL_FILTERS = [
     tcb_priorities,
     tcb_domains,
     remove_tcb_caps,
+    sc_default_properties,
+    sc_properties,
 ]

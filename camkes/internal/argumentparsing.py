@@ -74,6 +74,12 @@ TOOLS = {
             '--cpp-flag',
             '--debug',
             '--default-priority',
+            '--default-max-priority',
+            '--default-criticality',
+            '--default-max-criticality',
+            '--default-period',            
+            '--default-deadline',
+            '--default-exec-req',
             '--disallow-forward-references',
             '--elf',
             '--file',
@@ -236,6 +242,18 @@ def parse_args(tool):
         help='Do not support pre_init, post_init and friends.')
     add_arg('--default-priority', type=int, default=254,
         help='Default component thread priority.')
+    add_arg('--default-max-priority', type=int, default=254,
+        help='Default component thread maximum priority.')
+    add_arg('--default-criticality', type=int, default=1,
+        help='Default component thread criticality.')
+    add_arg('--default-max-criticality', type=int, default=1,
+        help='Default component thread maximum criticality.')
+    add_arg('--default-period', type=int, default=10000,
+        help='Default component thread scheduling context period.')
+    add_arg('--default-deadline', type=int, default=10000,
+        help='Default component thread scheduling context deadline.')
+    add_arg('--default-exec-req', type=int, default=10000,
+        help='Default component thread scheduling context execution requirement.')
     add_arg('--largeframe', action='store_true', \
         help='Try to use large frames.')
     add_arg('--prune', action='store_true', \
