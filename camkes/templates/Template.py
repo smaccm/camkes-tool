@@ -51,6 +51,14 @@ TEMPLATES = {
                 'source':'seL4RPCCall-to.template.c',
             },
         },
+        Guard(lambda x: isinstance(x, Connection) and x.type.name == 'seL4RPCSendWait'): {
+            'from':{
+                'source':'seL4RPCSendWait-from.template.c',
+            },
+            'to':{
+                'source':'seL4RPCSendWait-to.template.c',
+            },
+        },
         Guard(lambda x: isinstance(x, Connection) and x.type.name == 'seL4SharedData'):{
             'from':{
                 'source':'seL4SharedData-from.template.c',
