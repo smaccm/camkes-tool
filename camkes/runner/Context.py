@@ -87,6 +87,14 @@ def new_context(entity, configuration, obj_space, cap_space, shmem, **kwargs):
                 '%s_%s' % (entity.name, name), type, label=entity.name,
                 **kwargs),
                 **kwargs)) if cap_space else None,
+        'alloc_entity':(lambda name, type, entity_name, **kwargs:
+            alloc_cap((entity, cap_space), cap_space, name,
+            alloc_obj((entity, obj_space), obj_space, 
+                '%s_%s' % (entity_name, name), type, label=entity_name,
+                **kwargs),
+                **kwargs)) if cap_space else None,
+
+
 
         # Functionality for templates to inform us that they've emitted a C
         # variable that's intended to map to a shared variable. It is
@@ -104,6 +112,9 @@ def new_context(entity, configuration, obj_space, cap_space, shmem, **kwargs):
 
         # The AST assembly's configuration.
         'configuration':configuration,
+
+        # a scheduling context associated with an interface
+        'sc':(lambda name, **kwargs: get_sc(name, configuration, obj_space, **kwargs)),
 
         # Allow some AST objects to be printed trivially
         'show':show,
@@ -157,6 +168,7 @@ def new_context(entity, configuration, obj_space, cap_space, shmem, **kwargs):
         'chr':chr,
         'textwrap':collections.namedtuple('textwrap', ['wrap'])(textwrap.wrap),
         'copy':collections.namedtuple('copy', ['deepcopy'])(deepcopy),
+        'None':None,
 
         # Allocation pools. In general, do not touch these in templates, but
         # interact with them through the alloc* functions. They are only in the
@@ -428,3 +440,24 @@ def sizeof(t):
         return 1
     else:
         raise NotImplementedError
+
+def get_sc(tcb_name, configuration, obj_space, **kwargs):
+    perspective = Perspective(tcb=tcb_name, **kwargs)
+    settings = configuration.settings if configuration is not None else []
+    sc = None
+    sc_name = perspective['sc']
+    # check if this thread has been configured to not have an SC
+    sc_attribute = perspective['sc_attribute']
+    name = perspective['instance']
+    sc_attributes = filter(lambda x: \
+            x.instance == name and x.attribute == sc_attribute,
+                           settings)
+    if len(sc_attributes) != 1 or sc_attributes[0].value != '"none"':
+        scs = filter(lambda x: x.name == sc_name, obj_space.spec.objs) 
+        if len(scs) > 1:
+            raise Exception('Multiple SCs found for %s' % group)
+        elif len(scs) == 1:
+            sc, = scs
+            return sc
+    else:
+        return None

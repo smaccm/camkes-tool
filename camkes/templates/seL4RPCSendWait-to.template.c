@@ -48,7 +48,16 @@
 
 int /*? me.to_interface.name ?*/__run(void) {
     /*- set info = c_symbol('info') -*/
-    seL4_MessageInfo_t /*? info ?*/ = seL4_Wait(/*? ep ?*/, NULL);
+    /*- set my_sc = sc('%s_tcb_%s' % (me.to_instance.name, me.to_interface.name)) -*/
+    /*- if my_sc == None -*/
+    	/* This interface has a passive thread, must return the SC before waiting */
+        /*- set pre_init_ep = alloc_entity('pre_init_ep', seL4_EndpointObject, me.to_instance.name) -*/
+  	seL4_MessageInfo_t /*? info ?*/ = seL4_MessageInfo_new(0, 0, 0, 0);
+	/*? info ?*/ = seL4_SendWait(/*? pre_init_ep ?*/, /*? ep ?*/, /*? info ?*/, NULL);
+    /*- else -*/
+    	/* This interface has an active thread, just wait for an RPC */
+	seL4_MessageInfo_t /*? info ?*/ = seL4_Wait(/*? ep ?*/, NULL);
+	/*- endif -*/
     while (1) {
         /*- if not options.fcall_leave_reply_cap or len(me.to_instance.type.provides + me.to_instance.type.uses + me.to_instance.type.consumes + me.to_instance.type.mutexes + me.to_instance.type.semaphores) > 1 -*/
             /* We need to save the reply cap because the user's implementation may
