@@ -109,14 +109,12 @@ class Type(IDLObject):
             'real'             : 'real',
             'double'           : 'double',
             'float'            : 'float',
-            'pointer'          : 'uintptr_t', # deprecated
             'uintptr_t'        : 'uintptr_t',
             'char'             : 'char',
             'character'        : 'character',
             'boolean'          : 'boolean',
             'bool'             : 'boolean',
             'string'           : 'string',
-            'smallstring'      : 'string', # deprecated
         }
         assert isinstance(type, str)
         assert type in normalisation

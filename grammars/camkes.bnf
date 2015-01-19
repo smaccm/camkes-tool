@@ -78,7 +78,6 @@ import_statement : relative_import_statement
 builtin_import_statement : import ANGLE_STRING SEMI
                          ;
 procedure_keyword : procedure
-                  | trait
                   | interface
                   ;
 continuing_parameter_list : COMMA parameter continuing_parameter_list
@@ -113,13 +112,11 @@ type : int
      | real
      | double
      | float
-     | pointer
      | char
      | character
      | bool
      | boolean
      | string
-     | smallstring
      ;
 consumes_statement : consumes ID ID SEMI
                    ;
@@ -156,7 +153,6 @@ char : "char";
 boolean : "boolean";
 int16_t : "int16_t";
 int64_t : "int64_t";
-pointer : "pointer";
 out : "out";
 from : "from";
 uint8_t : "uint8_t";
@@ -171,7 +167,6 @@ composition : "composition";
 real : "real";
 assembly : "assembly";
 string : "string";
-trait : "trait";
 void : "void";
 component : "component";
 int8_t : "int8_t";
@@ -189,5 +184,4 @@ inout : "inout";
 uint32_t : "uint32_t";
 uint64_t : "uint64_t";
 uint16_t : "uint16_t";
-smallstring : "smallstring";
 procedure : "procedure";

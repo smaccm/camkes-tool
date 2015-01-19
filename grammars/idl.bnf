@@ -31,7 +31,6 @@ parameter : direction type ID
 builtin_import_statement : import ANGLE_STRING SEMI
                          ;
 procedure_keyword : procedure
-                  | trait
                   | interface
                   ;
 idl : 
@@ -66,13 +65,11 @@ type : int
      | real
      | double
      | float
-     | pointer
      | char
      | character
      | bool
      | boolean
      | string
-     | smallstring
      ;
 method : void ID LPAREN parameter_list RPAREN SEMI
        | type ID LPAREN parameter_list RPAREN SEMI
@@ -102,7 +99,6 @@ char : "char";
 boolean : "boolean";
 int16_t : "int16_t";
 int64_t : "int64_t";
-pointer : "pointer";
 out : "out";
 uint8_t : "uint8_t";
 character : "character";
@@ -111,7 +107,6 @@ bool : "bool";
 import : "import";
 real : "real";
 string : "string";
-trait : "trait";
 void : "void";
 int8_t : "int8_t";
 interface : "interface";
@@ -123,5 +118,4 @@ inout : "inout";
 uint32_t : "uint32_t";
 uint64_t : "uint64_t";
 uint16_t : "uint16_t";
-smallstring : "smallstring";
 procedure : "procedure";

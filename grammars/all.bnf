@@ -22,8 +22,7 @@ configuration_defn :
                    ;
 emits_statement : emits ID ID SEMI
                 ;
-isa_procedure_keyword : Trait
-                      | Procedure
+isa_procedure_keyword : Procedure
                       ;
 isa_continuing_method_list : 
                            | COMMA isa_method isa_continuing_method_list
@@ -92,7 +91,6 @@ isa_number : UnsignedInteger
            | int64_t
            | double
            | float
-           | Pointer
            ;
 isa_procedure : isa_method_list
               ;
@@ -121,13 +119,11 @@ type : int
      | real
      | double
      | float
-     | pointer
      | char
      | character
      | bool
      | boolean
      | string
-     | smallstring
      ;
 method : void ID LPAREN parameter_list RPAREN SEMI
        | type ID LPAREN parameter_list RPAREN SEMI
@@ -151,7 +147,6 @@ isa_interface : isa_procedure_keyword LPAREN isa_procedure RPAREN
 builtin_import_statement : import ANGLE_STRING SEMI
                          ;
 procedure_keyword : procedure
-                  | trait
                   | interface
                   ;
 isa_event : 
@@ -239,7 +234,6 @@ m_parameters : "m_parameters";
 p_name : "p_name";
 m_return_type : "m_return_type";
 uint8_t : "uint8_t";
-Trait : "Trait";
 character : "character";
 unsigned : "unsigned";
 conn_type : "conn_type";
@@ -248,7 +242,6 @@ MemoryConnector : "MemoryConnector";
 Integer : "Integer";
 real : "real";
 string : "string";
-trait : "trait";
 void : "void";
 int8_t : "int8_t";
 AsyncConnector : "AsyncConnector";
@@ -265,7 +258,6 @@ conn_from : "conn_from";
 Event : "Event";
 procedure : "procedure";
 control : "control";
-Pointer : "Pointer";
 int : "int";
 int64_t : "int64_t";
 SyncConnector : "SyncConnector";
@@ -277,7 +269,6 @@ m_name : "m_name";
 Real : "Real";
 InParameter : "InParameter";
 String : "String";
-pointer : "pointer";
 Numerical : "Numerical";
 SizedArray : "SizedArray";
 TerminatedArray : "TerminatedArray";
@@ -312,5 +303,4 @@ Dataport : "Dataport";
 attributes : "attributes";
 Array : "Array";
 requires : "requires";
-smallstring : "smallstring";
 inout : "inout";

@@ -102,7 +102,6 @@ def p_procedure_defn(t):
 
 def p_procedure_keyword(t):
     '''procedure_keyword : procedure
-                         | trait
                          | interface'''
     t[0] = t[1]
 
@@ -185,12 +184,10 @@ def p_type(t):
             | real
             | double
             | float
-            | pointer
             | uintptr_t
             | char
             | character
             | bool
             | boolean
-            | string
-            | smallstring'''
+            | string'''
     t[0] = Type(' '.join(t[1:]), filename=t.lexer.filename, lineno=t.lexer.lineno)

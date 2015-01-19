@@ -20,7 +20,6 @@ keywords = set([
 
     # Interface start keyword
     'interface',
-    'trait',
     'procedure',
     'event',
 
@@ -47,14 +46,12 @@ keywords = set([
     'real',
     'double',
     'float',
-    'pointer', # deprecated
     'uintptr_t',
     'char',
     'character',
     'boolean',
     'bool',
     'string',
-    'smallstring', # deprecated
 
     'void',
 ])
