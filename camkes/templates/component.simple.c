@@ -441,7 +441,7 @@ void camkes_make_simple(simple_t *simple) {
     simple->userimage_count = /*&simple_camkes_userimage_count*/NULL;
     simple->nth_userimage = /*&simple_camkes_nth_userimage*/NULL;
 #ifdef CONFIG_IOMMU
-    simple->iospace = &simple_camkes_get_iospace;
+    simple->arch_simple.iospace = &simple_camkes_get_iospace;
 #endif
     simple->print = &simple_camkes_print;
 }

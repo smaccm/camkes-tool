@@ -60,7 +60,10 @@ static volatile int sleepers;
 
 int /*? me.to_interface.name ?*/__run(void) {
     /* Set trigger mode */
+#if 0
     seL4_IRQHandler_SetMode(/*? irq[0][0] ?*/, /*? irq[0][1] ?*/, /*? irq[0][2] ?*/);
+#endif
+    printf("Hoping mode for %d was set to %d %d\n", /*? irq[0][0] ?*/, /*? irq[0][1] ?*/, /*? irq[0][2] ?*/);
     while (1) {
         int handled = 0;
 
