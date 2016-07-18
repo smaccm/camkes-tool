@@ -39,8 +39,18 @@ export MAKEFLAGS += $(foreach p, ${CAMKES_IMPORT_PATH}, --include-dir=${p})
 
 include tools/common/project.mk
 
-capdl-loader-experimental: $(filter-out capdl-loader-experimental,$(apps)) parse-capDL ${STAGE_BASE}/cpio-strip/cpio-strip
+capdl-loader-experimental: camkes_debug $(filter-out capdl-loader-experimental,$(apps)) parse-capDL ${STAGE_BASE}/cpio-strip/cpio-strip
 export CAPDL_SPEC:=$(foreach v,$(filter-out capdl-loader-experimental,${apps}),${BUILD_BASE}/${v}/${v}.cdl)
+
+export DEBUG_APP:=$(filter-out capdl-loader-experimental,${apps})
+camkes_debug:
+ifeq (${CONFIG_CAMKES_DEBUG},y)
+	@echo "[DEBUG]"
+	@echo " [GEN] $(APPS_ROOT)/$(DEBUG_APP)/$(DEBUG_APP).camkes.dbg"
+	@python "tools/camkes/debug/debug.py" "-a $(ARCH)" "-p $(PLAT)" \
+			"$(APPS_ROOT)/$(DEBUG_APP)/$(DEBUG_APP).camkes"
+	@echo "[DEBUG] done."
+endif
 
 export PATH:=${PATH}:${STAGE_BASE}/parse-capDL
 PHONY += parse-capDL

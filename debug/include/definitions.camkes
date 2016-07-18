@@ -1,0 +1,24 @@
+connector seL4Debug {
+  from Procedure user_inf template "seL4Debug-from.template.c";
+  to Procedure user_inf template "seL4Debug-to.template.c";
+}
+
+connector seL4GDB {
+  from Procedure user_inf template "seL4GDB-from.template.c";
+  to Procedure user_inf template "seL4GDB-to.template.c";
+}
+
+connector seL4GDBMem {
+  from Procedure user_inf template "seL4GDBMem-from.template.c";
+  to Procedure user_inf template "seL4GDBMem-to.template.c";
+}
+
+procedure CAmkES_Debug {
+  void debug(in int num);
+} 
+
+component debug_Serial {
+  hardware;
+  emits IRQ%s irq;
+  provides IOPort serial;
+}

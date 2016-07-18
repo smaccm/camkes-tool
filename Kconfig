@@ -254,6 +254,13 @@ menu "CAmkES Options"
 
     menu "Debugging"
 
+        config CAMKES_DEBUG
+        bool "Run GDB debug generator"
+        default n
+        help
+            Run the GDB debug generator on specifications before building them. 
+            This will generate GDB stubs and a server based on the specified debug components.
+
         config CAMKES_DEBUG_MALLOC
         bool "Enable allocation debugging"
         default n

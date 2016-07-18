@@ -1,0 +1,2 @@
+SERIAL_IRQ_NUM = 4
+SERIAL_PORTS = "0x3f8:0x3ff"
