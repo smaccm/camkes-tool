@@ -173,7 +173,7 @@ int camkes_io_port_out(void *cookie UNUSED, uint32_t port UNUSED,
 /*- set mutex = c_symbol(m.name) -*/
 static sync_mutex_t /*? mutex ?*/;
 
-static int mutex_/*? m.name ?*/_init(void) {
+/*- if not m.name.startswith('reinitializable_') -*/static /*- endif -*/int mutex_/*? m.name ?*/_init(void) {
     /*- set notification = alloc(m.name, seL4_NotificationObject, read=True, write=True) -*/
     return sync_mutex_init(&/*? mutex ?*/, /*? notification ?*/);
 }
