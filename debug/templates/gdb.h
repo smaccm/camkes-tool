@@ -8,14 +8,13 @@
 #define DEC_STRING						10
 #define CHAR_HEX_SIZE					2
 // Colour coding for response packets from GDB stub
-//#define GDB_RESPONSE_START 		  ""
-//#define GDB_RESPONSE_END		  ""
 #define GDB_RESPONSE_START      "\x1b[31m"
 #define GDB_RESPONSE_END        "\x1b[0m"
 
 // Ok packet for GDB
 #define GDB_ACK                 "+"
 #define x86_VALID_REGISTERS     10
+#define x86_GDB_REGISTERS       13
 #define x86_MAX_REGISTERS       16
 #define x86_INVALID_REGISTER    10
 #define x86_NUM_HW_BRK          4
@@ -26,9 +25,10 @@
 
 typedef enum {
     stop_none,
-    stop_hw_break,
     stop_sw_break,
-    stop_step
+    stop_hw_break,
+    stop_step,
+    stop_watch
 } stop_reason_t;
 
 typedef enum {
@@ -38,6 +38,23 @@ typedef enum {
     gdb_ReadWatchpoint,
     gdb_AccessWatchpoint
 } gdb_BreakpointType;
+
+// The ordering of registers as GDB expects them
+typedef enum {
+    GDBRegister_eax =    0,
+    GDBRegister_ecx =    1,
+    GDBRegister_edx =    2,
+    GDBRegister_ebx =    3,
+    GDBRegister_esp =    4,
+    GDBRegister_ebp =    5,
+    GDBRegister_esi =    6,
+    GDBRegister_edi =    7,
+    GDBRegister_eip =    8,
+    GDBRegister_eflags = 9,
+    GDBRegister_cs =     10,
+    GDBRegister_ss =     11,
+    GDBRegister_ds =     12
+} x86_gdb_registers;
 
 // The ordering for registers in seL4
 // Only required since GDB refers to registers by intel ordering
@@ -55,8 +72,9 @@ typedef struct gdb_buffer {
 
 gdb_buffer_t buf;
 
+
 // Map registers from what GDB expects to seL4 order
-static unsigned char x86_GDB_Register_Map[13] = {
+static unsigned char x86_GDB_Register_Map[x86_GDB_REGISTERS] = {
     // eax
     3,
     // ecx

@@ -13,9 +13,9 @@ import getopt
 
 from debug_config import SERIAL_IRQ_NUM, SERIAL_PORTS
 
-DEFINITIONS_DIR = os.path.realpath(__file__ + '/../include/definitions.camkes')
+DEFINITIONS_DIR = os.path.realpath(__file__ + '/../include/definitions.camkes.template')
 TEMPLATES_SRC_DIR = os.path.realpath(__file__ + '/../templates') + "/"
-DEBUG_CAMKES = os.path.realpath(__file__ + '/../include/debug.camkes')
+DEBUG_CAMKES = os.path.realpath(__file__ + '/../include/debug.camkes.template')
 
 def main(argv):
     # Parse input
@@ -90,7 +90,7 @@ def main(argv):
             for line in final_camkes:
                 f.write(line)
     else:
-        print " No debug components found"
+        print "No debug components found"
 
 # Find debug components declared in the camkes file
 def get_debug_components(target_ast):

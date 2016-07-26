@@ -48,7 +48,7 @@ static void send_message(char *message, int len) {
 static void string_to_word_data(char *string, seL4_Word *dest) {
     char buf[sizeof(int) * 2] = {0};
     strncpy(buf, string, sizeof(int) * 2);
-    *dest = (seL4_Word) strtoul((char *) buf, NULL, 16);
+    *dest = (seL4_Word) strtoul((char *) buf, NULL, HEX_STRING);
 }
 
 // GDB read memory command format:
@@ -127,7 +127,7 @@ static void GDB_write_memory_binary(char *command) {
     seL4_Word length = strtol(length_string, NULL, DEC_STRING);
     unsigned char *data = NULL;
     if (length != 0) {
-        data = (unsigned char *) strtok_r(NULL, ":#", &token_ptr);
+        data = (unsigned char *) strtok_r(NULL, ":", &token_ptr);
         // Copy the raw data to the expected location
     }
     // Do a write call to the GDB delegate who will write to memory 
@@ -144,7 +144,7 @@ static void GDB_write_memory_binary(char *command) {
 
 static void GDB_query(char *command) {
     char *token_ptr;
-    char *query_type = strtok_r(command, "q:#", &token_ptr);
+    char *query_type = strtok_r(command, "q:", &token_ptr);
     if (strcmp("Supported", query_type) == 0) {// Setup argument storage
         send_message("PacketSize=100", 0);
     // Most of these query messages can be ignored for basic functionality
@@ -208,12 +208,12 @@ static void GDB_read_register(char* command) {
     seL4_Word reg;
     char *token_ptr;
     // Get which register we want to read
-    char *reg_string = strtok_r(&command[1], "#", &token_ptr);
+    char *reg_string = strtok_r(&command[1], "", &token_ptr);
     if (reg_string == NULL) {
         send_message("E00", 0);
         return;
     }
-    seL4_Word reg_num = strtol(reg_string, NULL, 16);
+    seL4_Word reg_num = strtol(reg_string, NULL, HEX_STRING);
     if (reg_num >= x86_INVALID_REGISTER) {
         send_message("E00", 0);
         return;
@@ -231,7 +231,7 @@ static void GDB_read_register(char* command) {
 static void GDB_write_general_registers(char *command) {
     char *token_ptr;
     // Get args from command
-    char *data_string = strtok_r(&command[1], "#", &token_ptr);
+    char *data_string = strtok_r(&command[1], "", &token_ptr);
     // Truncate data to register length
     int num_regs = sizeof(seL4_UserContext) / sizeof(seL4_Word);
     int num_regs_data = (strlen(data_string)) / (sizeof(int) * 2);
@@ -246,7 +246,7 @@ static void GDB_write_general_registers(char *command) {
     }
     /*? me.from_instance.name ?*/_write_registers(tcb_num, data, 
                                                   num_regs_data);
-    reg_pc = data[8];
+    reg_pc = data[GDBRegister_eip];
     send_message("OK", 0);
 }
 
@@ -256,10 +256,10 @@ static void GDB_write_register(char *command) {
     char *token_ptr;
     // Parse arguments
     char *reg_string = strtok_r(&command[1], "=", &token_ptr);
-    char *data_string = strtok_r(NULL, "#", &token_ptr);
+    char *data_string = strtok_r(NULL, "", &token_ptr);
     // If valid register, do something, otherwise reply OK
-    seL4_Word reg_num = strtol(reg_string, NULL, 16);
-    if (reg_num < 13) {
+    seL4_Word reg_num = strtol(reg_string, NULL, HEX_STRING);
+    if (reg_num < x86_GDB_REGISTERS) {
         // Convert arguments
         seL4_Word data;
         string_to_word_data(data_string, &data);
@@ -268,7 +268,7 @@ static void GDB_write_register(char *command) {
         seL4_Word seL4_reg_num = x86_GDB_Register_Map[reg_num];
         /*? me.from_instance.name ?*/_write_register(tcb_num, data, 
                                                      seL4_reg_num);
-        if (reg_num == 8) {
+        if (reg_num == GDBRegister_eip) {
             reg_pc = data;
         }
     }   
@@ -286,41 +286,41 @@ static void GDB_vcont(char *command) {
 }
 
 static void GDB_continue(char *command) {
-    // Disable step mode by clearing TRAP in EFLAGS
+    int err = 0;
     if (step_mode) {
-        
-        seL4_Word flags;
-        /*? me.from_instance.name ?*/_read_register(tcb_num, &flags, 
-                                                    SEL4_EFLAGS);
-        // Clear trap flag
-        flags &= ~0x100;
-        /*? me.from_instance.name ?*/_write_register(tcb_num, flags, 
-                                                     SEL4_EFLAGS);
+        err = /*? me.from_instance.name ?*/_resume(tcb_num);
         step_mode = false;
     }
     stream_read = false;
     seL4_MessageInfo_t info;
-    if (stop_reason == stop_step) {
-        info = seL4_MessageInfo_new(0, 0, 0, 2);
-        seL4_SetMR(0, 0);
-        seL4_SetMR(1, 0);
-        seL4_Send(/*? reply_cap_slot ?*/, info);
+    if (err) {
+        send_message("E01", 0);
     } else {
-        info = seL4_MessageInfo_new(0, 0, 0, 1);
-        seL4_SetMR(0, reg_pc);
-        seL4_Send(/*? reply_cap_slot ?*/, info);
+        if (stop_reason >= stop_hw_break) {
+            info = seL4_MessageInfo_new(0, 0, 0, 2);
+            seL4_SetMR(0, 0);
+            seL4_SetMR(1, 0);
+            seL4_Send(/*? reply_cap_slot ?*/, info);
+        } else {
+            info = seL4_MessageInfo_new(0, 0, 0, 1);
+            seL4_SetMR(0, reg_pc);
+            seL4_Send(/*? reply_cap_slot ?*/, info);
+        }
     }
 }
 
 static void GDB_step(char *command) {
-    step_mode = true;
-    int err = /*? me.from_instance.name ?*/_step(tcb_num);
+    int err = 0;
+    if (!step_mode) {
+        err = /*? me.from_instance.name ?*/_step(tcb_num);
+        step_mode = true;
+    }
     stream_read = false;
     if (err) {
         send_message("E01", 0);
     } else {
         seL4_MessageInfo_t info;
-        if (stop_reason == stop_step) {
+        if (stop_reason >= stop_hw_break) {
             info = seL4_MessageInfo_new(0, 0, 0, 2);
             seL4_SetMR(0, 0);
             seL4_SetMR(1, 1);
@@ -354,6 +354,10 @@ static void GDB_breakpoint(char *command, bool insert) {
         int err;
         err = get_breakpoint_format(type, &break_type, &rw);
         if (!err) {
+            // Hardware breakpoints can only be size 0
+            if (type == gdb_HardwareBreakpoint) {
+                size = 0;
+            }
             if (insert) {
                 err = /*? me.from_instance.name ?*/_insert_break(tcb_num, break_type,
                                                                  addr, size,

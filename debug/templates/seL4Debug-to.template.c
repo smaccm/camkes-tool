@@ -173,9 +173,6 @@ static void read_registers(void) {
     seL4_SetMR(7, regs.edi);
     seL4_SetMR(8, regs.eip);
     seL4_SetMR(9, regs.eflags);
-    /*seL4_SetMR(10, regs.cs);
-    seL4_SetMR(11, regs.ss);
-    seL4_SetMR(12, regs.ds);*/
     seL4_Send(/*? ep ?*/, info);
 }
 
@@ -264,6 +261,7 @@ static void insert_break(void) {
             set_breakpoint_state(addr, type, size, rw, bp_num);
         }
         printf("error %d\n", err);
+        printf("Cap %d\n", tcb_cap);
         seL4_TCB_GetBreakpoint_t bp = seL4_TCB_GetBreakpoint(tcb_cap, bp_num);
         printf("err: %d\n", bp.error);
         printf("vaddr %08x\n", bp.vaddr);
@@ -341,23 +339,23 @@ static int check_write_memory(seL4_Word addr) {
 }
 
 static void resume(void) {
-    int err = 0;
     seL4_Word tcb_cap = seL4_GetMR(DELEGATE_ARG(0));
-    err = seL4_TCB_Resume(tcb_cap);
+    seL4_TCB_ConfigureSingleStepping_t result = 
+        seL4_TCB_ConfigureSingleStepping(tcb_cap, 0, 0);
     // Send a reply
     seL4_MessageInfo_t info = seL4_MessageInfo_new(0, 0, 0, 1);
-    if (err) {
+    if (result.error) {
         seL4_SetMR(0, 1);
     } else {
         seL4_SetMR(0, 0);
     }
-    seL4_SetMR(0, 0);
     seL4_Send(/*? ep ?*/, info);
 }
 
 static void step(void) {
     seL4_Word tcb_cap = seL4_GetMR(DELEGATE_ARG(0));
-    seL4_TCB_ConfigureSingleStepping_t result = seL4_TCB_ConfigureSingleStepping(tcb_cap, 0, 1);
+    seL4_TCB_ConfigureSingleStepping_t result = 
+        seL4_TCB_ConfigureSingleStepping(tcb_cap, 0, 1);
     // Send a reply
     seL4_MessageInfo_t info = seL4_MessageInfo_new(0, 0, 0, 1);
     if (result.error) {

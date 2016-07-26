@@ -39,7 +39,6 @@
 
 static int handle_command(char* command);
 static void find_stop_reason(seL4_Word exception_num, seL4_Word fault_type);
-static void print_debug_status(seL4_Uint32 length, seL4_Word fault_addr, seL4_Word exception_num, seL4_Word exception_code, seL4_Word fault_type);
 
 static seL4_Word reg_pc;
 static seL4_Word tcb_num;
@@ -58,19 +57,17 @@ int /*? me.to_interface.name ?*/__run(void) {
     seL4_Word fault_type;
     seL4_Word fault_addr;
     seL4_Word exception_num;
-    seL4_Word exception_code;
+    seL4_Word length;
     seL4_MessageInfo_t info;
-    seL4_Uint32 length;
     while (1) {
         info = seL4_Recv(/*? ep ?*/, &tcb_num);
-        length = seL4_MessageInfo_get_length(info);
         fault_type = seL4_MessageInfo_get_label(info);
+        length = seL4_MessageInfo_get_length(info);
         // Get the PC relevant registers
         reg_pc = seL4_GetMR(0);
-        fault_addr = seL4_GetMR(1);
         exception_num = seL4_GetMR(3);
-        exception_code = seL4_GetMR(4);
-        print_debug_status(length, fault_addr, exception_num, exception_code, fault_type);
+        debug_printf("Stopped at %08x\n", reg_pc);
+        debug_printf("Length: %lu\n", length);
         // Save the reply cap
         seL4_CNode_SaveCaller(/*? cnode ?*/, /*? reply_cap_slot ?*/, 32);
         find_stop_reason(exception_num, fault_type);
@@ -81,25 +78,8 @@ int /*? me.to_interface.name ?*/__run(void) {
     UNREACHABLE();
 }
 
-void print_debug_status(seL4_Uint32 length, seL4_Word fault_addr, seL4_Word exception_num, seL4_Word exception_code, seL4_Word fault_type) {
-    debug_printf("Fault type %d\n", fault_type);
-    debug_printf("Fault received on /*? me.to_interface.name ?*/\n");
-    debug_printf("Message length %d\n", length);
-    debug_printf("0: PC %08x\n", reg_pc);
-    debug_printf("1: Fault address %08x\n", fault_addr);
-    debug_printf("2: %08x\n", seL4_GetMR(2));
-    debug_printf("3: Exception num %08x\n", exception_num);
-    debug_printf("4: Exception code %08x\n", exception_code);
-    debug_printf("Thread num %08x\n", tcb_num);
-    debug_printf("Step mode %d\n", step_mode);
-}
-
 static void find_stop_reason(seL4_Word exception_num, seL4_Word fault_type) {
-    if (exception_num == HARDWARE_BREAKPOINT && !step_mode) {
-        send_message("T05thread:01;hwbreak:;", 0);
-        stop_reason = stop_hw_break;
-    } else if (exception_num == GENERAL_PROTECTION_FAULT && !step_mode &&
-               fault_type == seL4_UserException) {
+    if (fault_type == seL4_UserException) {
         // Read from memory to make sure it's a user added software breakpoint
         unsigned char byte_check;
         /*? me.from_instance.name ?*/_read_memory(reg_pc, 1, &byte_check);
@@ -109,16 +89,29 @@ static void find_stop_reason(seL4_Word exception_num, seL4_Word fault_type) {
             /*? me.from_instance.name ?*/_write_register(tcb_num, reg_pc, 0);
             send_message("T05thread:01;swbreak:;", 0);
             stop_reason = stop_sw_break;
+            debug_printf("Software breakpoint\n");
         } else {
-            printf("Got byte %02x\n", byte_check);
+            debug_printf("Got byte %02x\n", byte_check);
             send_message("T05thread:01;", 0);
             stop_reason = stop_none; 
+            debug_printf("Unknown stop reason, GP fault\n");
         }
-    } else if (fault_type == seL4_DebugException && step_mode) {
-        stop_reason = stop_step;
+    } else if (fault_type == seL4_DebugException) {
+        seL4_Word bp_num = seL4_GetMR(1);
+        debug_printf("Breakpoint number %lu\n", bp_num);
+        if (step_mode) {
+            send_message("T05thread:01;", 0);
+            stop_reason = stop_step;
+            debug_printf("Did step\n");
+        } else {
+            send_message("T05thread:01;", 0);
+            stop_reason = stop_watch;
+            debug_printf("Hit watchpoint / breakpoint\n");
+        }
     } else {
-        send_message("T05thread:01;", 0);
+        send_message("T05thread:01;\n", 0);
         stop_reason = stop_none;
+        debug_printf("Unknown stop reason\n");
     }
     step_mode = false;
 }

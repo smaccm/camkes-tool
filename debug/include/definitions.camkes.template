@@ -15,7 +15,7 @@ connector seL4GDBMem {
 
 procedure CAmkES_Debug {
   void debug(in int num);
-} 
+}
 
 component debug_Serial {
   hardware;
