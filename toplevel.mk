@@ -56,6 +56,9 @@ ifeq (${CONFIG_CAMKES_DEBUG},y)
 	@python "$(TOOLS_ROOT)/camkes/debug/debug.py" "-a $(ARCH)" "-p $(PLAT)" \
 			"$(DEBUG_FILE)" "$(DEBUG_VM)"
 	@echo "[DEBUG] done."
+else
+	@if [ -e $(DEBUG_MAKEFILE).bk ]; \
+	then python "tools/camkes/debug/debug.py" "-c" "$(DEBUG_FILE)"; fi
 endif
 
 camkes-debug-clean:
