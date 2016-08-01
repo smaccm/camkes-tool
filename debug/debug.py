@@ -35,7 +35,6 @@ def main(argv):
     camkes_builtin_path = camkes_path + 'include/builtin'
     include_path = [camkes_builtin_path]
     if vm_mode:
-        print "vm mode"
         cpp = True
         config_path = top_level_dir + 'apps/%s/configurations' % vm
         vm_components_path = top_level_dir + 'apps/%s/../../components/VM' % vm
@@ -46,10 +45,14 @@ def main(argv):
     else:
         cpp = False
         cpp_options = []
+    # Check if debugger has been run already, and exit if it has
+    project_dir = os.path.dirname(os.path.realpath(project_camkes)) + "/"
+    if os.path.isfile(project_dir + "Makefile.bk"):
+        print " CAmkES GDB already generated"
+        sys.exit()
     # Parse using camkes parser
     target_ast = parser.parse_to_ast(camkes_text, cpp, cpp_options)  
     # Resolve other imports
-    project_dir = os.path.dirname(os.path.realpath(project_camkes)) + "/"
     target_ast, _ = parser.resolve_imports(target_ast, project_dir, include_path, cpp, cpp_options)
     target_ast = parser.resolve_references(target_ast)
     # Find debug components declared in the camkes file
@@ -300,8 +303,8 @@ def clean_debug(project_camkes):
         os.remove(project_dir + "Makefile")
         os.rename(project_dir + "Makefile.bk", 
                   project_dir + "Makefile")
-    if os.path.isfile(project_camkes + ".dbg"):
-        os.remove(project_camkes + ".dbg")
+    if os.path.isfile(project_camkes):
+        os.remove(project_camkes)
     if os.path.isdir(project_dir + "debug"):
         shutil.rmtree(project_dir + "debug")
     if os.path.isfile(top_level_dir + ".gdbinit"):
@@ -326,14 +329,14 @@ def parse_args(argv):
     vm_mode = False
     vm = None
     try:
-        opts, args = getopt.getopt(argv, "cmv:p:a:")
+        opts, args = getopt.getopt(argv, "cmp:a:")
     except getopt.GetoptError as err:
         print str(err)
         sys.exit(1)
     if len(args) == 0:
         print "Not enough arguments"
         sys.exit(1)
-    elif len(args) > 1:
+    elif len(args) > 2:
         print args
         print "Too many args"
         sys.exit(1)
@@ -342,13 +345,13 @@ def parse_args(argv):
         if not os.path.isfile(project_camkes):
             print "File not found: %s" % project_camkes
             sys.exit(1)
+        if len(args) > 1:
+            vm_mode = True
+            vm = args[1]
     for opt, arg in opts:
         if opt == "-c":
             clean_debug(project_camkes)
             sys.exit(0)
-        if opt == "-v":
-            vm_mode = True
-            vm = arg
         if opt == "-p":
             plat = arg.lstrip()
         if opt == "-a":
