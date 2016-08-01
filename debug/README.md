@@ -30,7 +30,7 @@ div.attn {
   -->
 
 This document describes the structure and use of the CAmkES debug tool, which allows you to debug systems built on the CAmkES platform. The documentation is divided into sections for users and developers. The [Usage](#usage) section is for people wanting to debug a component that they or someone else has built on CAmkES, as well as the current limitations of the tool. The [Developers](#developers) will describe the internal implementation of the tool, for anyone who wishes to modify or extend the functionality of the tool itself.
-This document assumes some familiary with [CAmkES](https://github.com/seL4/ camkes-tool/blob/master/docs/index.md) and the [seL4 microkernel](http://sel4.systems/). If you are not familiar with them then you should read their documentation first.
+This document assumes some familiary with [CAmkES](https://github.com/seL4/camkes-tool/blob/master/docs/index.md) and the [seL4 microkernel](http://sel4.systems/). If you are not familiar with them then you should read their documentation first.
 
 ## Table of Contents
 1. [Usage](#usage)
@@ -69,20 +69,17 @@ You can set the serial port to use for debugging in tools/camkes/debug/debug_con
 The debug tool is used by setting the relevant option in the build.
 In the build config menu, enable CAmkES options -> Debugging -> Run GDB debug generator.
 
-</br>
 ### Debugging
-
-<br/>
-
 After you have built the image, you should be able to connect to the serial port via GDB. The GDB connection will only be opened once there is a fault or breakpoint, so if you want to inspect on startup you should set a code breakpoint within the component you are debugging.
 
 The same serial port also provides other information about the state of the debugger, simply connect to the port (eg. via minicom) to view any messages.
 
 The following code will run the image in QEMU, and divert output to port 1234, which can then be connected to by GDB.
-``` qemu-system-i386 -nographic -m 512 -kernel images/kernel-ia32-pc99   -initrd images/capdl-loader-experimental-image-ia32-pc99 \
+```
+qemu-system-i386 -nographic -m 512 -kernel images/kernel-ia32-pc99   -initrd images/capdl-loader-experimental-image-ia32-pc99 \
 -chardev socket,host=127.0.0.1,port=1234,id=gnc0,server,nowait \
--device isa-serial,chardev=gnc0 ```
-<br> </br>
+-device isa-serial,chardev=gnc0
+```
 
 ### Using GDB
 Current functionality includes reading memory and registers, backtrace, seeing variables, and so on. Software and hardware breakpoints, as well as watchpoints, can be set.
