@@ -142,6 +142,8 @@ static void GDB_write_memory_binary(char *command) {
     }
 }
 
+// GDB query command format:
+// q[query]...
 static void GDB_query(char *command) {
     char *token_ptr;
     char *query_type = strtok_r(command, "q:", &token_ptr);
@@ -195,6 +197,8 @@ static void GDB_read_general_registers(char* command) {
     int buf_len = x86_MAX_REGISTERS * sizeof(int) * CHAR_HEX_SIZE + 1;
     char data[buf_len];
     memset(data, 0, buf_len);
+    // Read the register data from the buffer and marshall into a string
+    // to send back to GDB, making sure the byte order is correct
     for (int i = 0; i < x86_MAX_REGISTERS; i++) {
         sprintf(data + sizeof(seL4_Word) * CHAR_HEX_SIZE * i, 
                 "%08x", __builtin_bswap32(registers[i]));
@@ -224,6 +228,8 @@ static void GDB_read_register(char* command) {
                                                 seL4_reg_num);
     int buf_len = sizeof(seL4_Word) * CHAR_HEX_SIZE + 1;
     char data[buf_len];
+    // Send the register contents as a string, making sure
+    // the byte order is correct
     sprintf(data, "%02x", __builtin_bswap32(reg));
     send_message(data, buf_len);
 }
@@ -296,12 +302,18 @@ static void GDB_continue(char *command) {
     if (err) {
         send_message("E01", 0);
     } else {
+        // Reply to the fault ep to restart the thread
         if (stop_reason >= stop_hw_break) {
+            // If this was a Debug Exception, then we respond with
+            // a bp_num and the number of instruction to step
+            // Since we're going to continue, we set MR1 to 0
             info = seL4_MessageInfo_new(0, 0, 0, 2);
             seL4_SetMR(0, 0);
             seL4_SetMR(1, 0);
             seL4_Send(/*? reply_cap_slot ?*/, info);
         } else {
+            // If this was a fault, set the instruction pointer to
+            // what we expect it to be
             info = seL4_MessageInfo_new(0, 0, 0, 1);
             seL4_SetMR(0, reg_pc);
             seL4_Send(/*? reply_cap_slot ?*/, info);
@@ -321,11 +333,16 @@ static void GDB_step(char *command) {
     } else {
         seL4_MessageInfo_t info;
         if (stop_reason >= stop_hw_break) {
+            // If this was a Debug Exception, then we respond with
+            // a bp_num and the number of instruction to step
+            // Since we're going to step, we set MR1 to 1
             info = seL4_MessageInfo_new(0, 0, 0, 2);
             seL4_SetMR(0, 0);
             seL4_SetMR(1, 1);
             seL4_Send(/*? reply_cap_slot ?*/, info);
         } else {
+            // If this was a fault, set the instruction pointer to
+            // what we expect it to be
             info = seL4_MessageInfo_new(0, 0, 0, 1);
             seL4_SetMR(0, reg_pc);
             seL4_Send(/*? reply_cap_slot ?*/, info);
@@ -348,6 +365,9 @@ static void GDB_breakpoint(char *command, bool insert) {
     seL4_Word addr = (seL4_Word) strtol(addr_string, NULL, HEX_STRING);
     seL4_Word size = (seL4_Word) strtol(size_string, NULL, HEX_STRING);
     // If this is a software breakpoint, then we will ignore
+    // By ignoring this command, GDB will just use the read and write
+    // memory commands to set a breakpoint itself. This can later be changed
+    // if setting software breakpoints becomes supported by the kernel.
     if (type == gdb_SoftwareBreakpoint) {
         send_message("", 0);
     } else {
