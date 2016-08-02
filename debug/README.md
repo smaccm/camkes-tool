@@ -84,6 +84,8 @@ qemu-system-i386 -nographic -m 512 -kernel images/kernel-ia32-pc99   -initrd ima
 ### Using GDB
 Current functionality includes reading memory and registers, backtrace, seeing variables, and so on. Software and hardware breakpoints, as well as watchpoints, can be set.
 
+The tool generates a .gdbinit file, so simply start gdb by running `gdb`.
+
 ## Developers
 
 This section is targeted at those intending to modify the CAmkES debug tool implementation itself. The information below assumes you are familiar with the functionality of CAmkES.
