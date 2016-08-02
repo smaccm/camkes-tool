@@ -7,6 +7,8 @@ def main(argv):
 	vm_regex = re.compile(r'VM_CONFIG\s*:=\s*([\w.]*)')
 	# Get the ADL from the Makefile
 	# Also get the VM config if it is a VMs
+	adl = None
+	vm = None
 	if len(argv) >= 1:
 		with open(argv[0]) as makefile:
 			lines = makefile.readlines()
