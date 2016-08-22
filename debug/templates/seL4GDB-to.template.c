@@ -50,7 +50,7 @@ static stop_reason_t stop_reason = stop_none;
 /*- include 'gdb.c' -*/
 
 void /*? me.to_interface.name ?*/__init(void) {
-    serial_init();
+    debug_serial_init();
 }
 
 int /*? me.to_interface.name ?*/__run(void) {
@@ -61,6 +61,7 @@ int /*? me.to_interface.name ?*/__run(void) {
     seL4_MessageInfo_t info;
     while (1) {
         info = seL4_Recv(/*? ep ?*/, &tcb_num);
+        debug_printf("Received fault for tcb %u\n", tcb_num);
         fault_type = seL4_MessageInfo_get_label(info);
         length = seL4_MessageInfo_get_length(info);
         // Get the PC relevant registers

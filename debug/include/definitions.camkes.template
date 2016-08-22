@@ -29,6 +29,6 @@ procedure CAmkES_Debug {
 
 component debug_Serial {
   hardware;
-  emits IRQ%s irq;
   provides IOPort serial;
+  emits IRQ%s serial_irq;
 }

@@ -96,8 +96,8 @@ static inline uint8_t read_msr() {
 
 // Serial config
 
-static void serial_init(void) {
-	// Initialize the serial port
+static void debug_serial_init(void) {
+    // Initialize the serial port
     set_dlab(0); // we always assume the dlab is 0 unless we explicitly change it
     disable_interrupt();
     disable_fifo();

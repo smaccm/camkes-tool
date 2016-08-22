@@ -78,7 +78,7 @@ static inline uint8_t read_iir(void);
 static inline uint8_t read_msr(void);
 
 // Serial config
-static void serial_init(void);
+static void debug_serial_init(void);
 static void set_dlab(int v);
 static void disable_interrupt(void);
 static void disable_fifo(void);

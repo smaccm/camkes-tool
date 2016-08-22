@@ -177,8 +177,8 @@ def add_debug_declarations(target_ast, debug_components, hierarchical_components
                     obj.connections += assembly_connections
                 # Add debug configuration options
                 elif isinstance(obj, ast.Objects.Configuration):
-                    serial_irq = ast.Objects.Setting("debug_hw_serial", "irq_attributes", \
-                                                     SERIAL_IRQ_NUM)
+                    serial_irq = ast.Objects.Setting("debug_hw_serial", "serial_irq_attributes", \
+                                                      SERIAL_IRQ_NUM)
                     obj.settings.append(serial_irq)
                     serial_attr = ast.Objects.Setting("debug_hw_serial", "serial_attributes",\
                                                       "\"%s\"" % SERIAL_PORTS)
@@ -328,11 +328,20 @@ def write_gdbinit(projects_name, debug_components, arch, plat):
 def parse_args(argv):
     vm_mode = False
     vm = None
+    clean = False
     try:
         opts, args = getopt.getopt(argv, "cmp:a:")
     except getopt.GetoptError as err:
         print str(err)
         sys.exit(1)
+    for opt, arg in opts:
+        if opt == "-c":
+            clean = True
+        if opt == "-p":
+            plat = arg.lstrip()
+        if opt == "-a":
+            arch = arg.lstrip()
+
     if len(args) == 0:
         print "Not enough arguments"
         sys.exit(1)
@@ -342,20 +351,15 @@ def parse_args(argv):
         sys.exit(1)
     else:
         project_camkes = args[0]
-        if not os.path.isfile(project_camkes):
+        if clean:
+            clean_debug(project_camkes)
+            sys.exit(0)
+        elif not os.path.isfile(project_camkes):
             print "File not found: %s" % project_camkes
             sys.exit(1)
         if len(args) > 1:
             vm_mode = True
             vm = args[1]
-    for opt, arg in opts:
-        if opt == "-c":
-            clean_debug(project_camkes)
-            sys.exit(0)
-        if opt == "-p":
-            plat = arg.lstrip()
-        if opt == "-a":
-            arch = arg.lstrip()
     return project_camkes, plat, arch, vm_mode, vm
 
 if __name__ == "__main__":
