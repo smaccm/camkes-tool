@@ -23,8 +23,6 @@
 
 /*- for cap, cap_name in thread_caps: -*/
  	/*- if not cap_name == me.from_instance.name + "_tcb_GDB_delegate": -*/
-	    /*- set fault_cap = alloc_cap(cap_name + "_fault_ep", fault_obj, read=True, write=True, grant=True) -*/
-	    /*- do cap_space.cnode[fault_cap].set_badge(cap) -*/
-	    /*- do cap_space.cnode[cap].referent.set_fault_ep_slot(fault_cap) -*/
+	    /*- do cap_space.cnode[cap].referent.set_fault_ep_slot(fault_ep=fault_obj.name, badge=cap) -*/
  	/*- endif -*/
 /*- endfor -*/
