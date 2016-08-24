@@ -70,7 +70,11 @@ int /*? me.to_interface.name ?*/__run(void) {
         debug_printf("Stopped at %08x\n", reg_pc);
         debug_printf("Length: %lu\n", length);
         // Save the reply cap
+    #ifdef CONFIG_KERNEL_RT
         seL4_CNode_SwapCaller(/*? cnode ?*/, /*? reply_cap_slot ?*/, 32);
+    #else
+        seL4_CNode_SaveCaller(/*? cnode ?*/, /*? reply_cap_slot ?*/, 32);
+    #endif
         find_stop_reason(exception_num, fault_type);
         // Start accepting GDB input
         stream_read = true;
@@ -232,7 +236,7 @@ static int handle_command(char* command) {
             } else if (!strncmp(&command[1], "Cont", 4)) {
                 GDB_vcont(command);
             } else {
-                printf("Command not supported\n");
+                debug_printf("Command not supported\n");
             }
             break;
         case 'X':
