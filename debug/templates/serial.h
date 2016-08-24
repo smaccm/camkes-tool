@@ -95,6 +95,7 @@ static void clear_iir(void);
 static void serial_putchar(int c);
 static void handle_char(void);
 static void serial_irq_rcv(void *cookie);
+static void gdb_printf(const char *format, ...);
 
 #define debug_printf(format, args...) do { \
     if (DEBUG_PRINT) { \

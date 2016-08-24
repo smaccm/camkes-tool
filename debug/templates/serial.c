@@ -110,7 +110,6 @@ static void debug_serial_init(void) {
     enable_interrupt();
     clear_iir();
     initialise_buffer();
-    set_putchar(serial_putchar);
 }
 
 static void set_dlab(int v) {
@@ -195,6 +194,10 @@ static void serial_putchar(int c) {
         wait_for_fifo();
     }
     write_thr((uint8_t)c);
+    if (c == '\n') {
+        wait_for_fifo();
+        write_thr('\r');
+    }
     fifo_used++;
 }
 
@@ -222,4 +225,15 @@ static void serial_irq_rcv(void *cookie) {
     if (stream_read) {
     	serial_irq_reg_callback(serial_irq_rcv, cookie);
     }  
+}
+
+static void gdb_printf(const char *format, ...) {
+    va_list arg;
+    char text_buf[MAX_PRINTF_LENGTH];
+    va_start(arg, format);
+    vsnprintf(text_buf, MAX_PRINTF_LENGTH, format, arg);
+    va_end(arg);
+    for (int i = 0; i < strlen(text_buf); i++) {
+        serial_putchar(text_buf[i]);
+    }
 }

@@ -12,7 +12,7 @@
 
 static int handle_gdb(void) {
     // Acknowledge packet
-    printf(GDB_RESPONSE_START GDB_ACK GDB_RESPONSE_END "\n");
+    gdb_printf(GDB_RESPONSE_START GDB_ACK GDB_RESPONSE_END "\n");
     // Get command and checksum
     int command_length = buf.checksum_index-1;
     char *command_ptr = &buf.data[COMMAND_START];
@@ -51,8 +51,8 @@ static void send_message(char *message, int len) {
         len = strlen(message);
     }
     unsigned char checksum = compute_checksum(message, len);
-    printf(GDB_RESPONSE_START "$%s#%02X\n", message, checksum);
-    printf(GDB_RESPONSE_END);
+    gdb_printf(GDB_RESPONSE_START "$%s#%02X\n", message, checksum);
+    gdb_printf(GDB_RESPONSE_END);
 }
 
 static void string_to_word_data(char *string, seL4_Word *dest) {
