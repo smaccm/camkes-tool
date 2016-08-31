@@ -32,8 +32,6 @@ int /*? me.to_interface.name ?*/__run(void) {
  	seL4_UserContext regs;
     while (1) {
         seL4_Recv(/*? mem_ep ?*/, &delegate_tcb);
-        printf("Mem fault received at PC %08x\n", seL4_GetMR(0));
-        printf("Fault on %08x\n", seL4_GetMR(1));
         seL4_TCB_ReadRegisters(delegate_tcb, false, 0, 
         	                   sizeof(seL4_UserContext) / sizeof(seL4_Word),
         	                   &regs);
@@ -49,7 +47,6 @@ int /*? me.to_interface.name ?*/__run(void) {
 	        	                    sizeof(seL4_UserContext) / sizeof(seL4_Word), 
 	        	                    &regs);
 	        // Resume the caller
-	        printf("PC: %08x\n", regs.eip);
 	        seL4_MessageInfo_t info = seL4_MessageInfo_new(0, 0, 0, 1);
     		seL4_SetMR(0, regs.eip);
 	        seL4_Reply(info);

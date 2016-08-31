@@ -38,7 +38,7 @@
 /*- include 'gdb.h' -*/
 
 static int handle_command(char* command);
-static void find_stop_reason(seL4_Word exception_num, seL4_Word fault_type);
+static void find_stop_reason(seL4_Word exception_num, seL4_Word fault_type, seL4_Word bp_num);
 
 static seL4_Word reg_pc;
 static seL4_Word tcb_num;
@@ -57,16 +57,18 @@ int /*? me.to_interface.name ?*/__run(void) {
     seL4_Word fault_type;
     seL4_Word fault_addr;
     seL4_Word exception_num;
+    seL4_Word bp_num;
     seL4_Word length;
     seL4_MessageInfo_t info;
     while (1) {
         info = seL4_Recv(/*? ep ?*/, &tcb_num);
-        debug_printf("Received fault for tcb %u\n", tcb_num);
         fault_type = seL4_MessageInfo_get_label(info);
         length = seL4_MessageInfo_get_length(info);
         // Get the PC relevant registers
         reg_pc = seL4_GetMR(0);
+        bp_num = seL4_GetMR(1);
         exception_num = seL4_GetMR(3);
+        debug_printf("Received fault for tcb %u\n", tcb_num);
         debug_printf("Stopped at %08x\n", reg_pc);
         debug_printf("Length: %lu\n", length);
         // Save the reply cap
@@ -75,7 +77,7 @@ int /*? me.to_interface.name ?*/__run(void) {
     #else
         seL4_CNode_SaveCaller(/*? cnode ?*/, /*? reply_cap_slot ?*/, 32);
     #endif
-        find_stop_reason(exception_num, fault_type);
+        find_stop_reason(exception_num, fault_type, bp_num);
         // Start accepting GDB input
         stream_read = true;
         serial_irq_reg_callback(serial_irq_rcv, 0);
@@ -83,7 +85,7 @@ int /*? me.to_interface.name ?*/__run(void) {
     UNREACHABLE();
 }
 
-static void find_stop_reason(seL4_Word exception_num, seL4_Word fault_type) {
+static void find_stop_reason(seL4_Word exception_num, seL4_Word fault_type, seL4_Word bp_num) {
     if (fault_type == seL4_UserException) {
         // Read from memory to make sure it's a user added software breakpoint
         unsigned char byte_check;
@@ -102,7 +104,6 @@ static void find_stop_reason(seL4_Word exception_num, seL4_Word fault_type) {
             debug_printf("Unknown stop reason, GP fault\n");
         }
     } else if (fault_type == seL4_DebugException) {
-        seL4_Word bp_num = seL4_GetMR(1);
         debug_printf("Breakpoint number %lu\n", bp_num);
         if (step_mode) {
             send_message("T05thread:01;", 0);

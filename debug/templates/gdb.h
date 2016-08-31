@@ -11,18 +11,21 @@
 #define NO_BREAKPOINT -1
 #define USER_BREAKPOINT 0
 #define BREAKPOINT_INSTRUCTION 0xCC
-#define DEBUG_PRINT true
+#define DEBUG_PRINT false
 #define MAX_ARGS 20   
 #define COMMAND_START                   1
 #define HEX_STRING						16
 #define DEC_STRING						10
 #define CHAR_HEX_SIZE					2
 // Colour coding for response packets from GDB stub
-#define GDB_RESPONSE_START      "\x1b[31m"
-#define GDB_RESPONSE_END        "\x1b[0m"
+//#define GDB_RESPONSE_START      "\x1b[31m"
+//#define GDB_RESPONSE_END        "\x1b[0m"
+#define GDB_RESPONSE_START      ""
+#define GDB_RESPONSE_END        ""
 
 // Ok packet for GDB
 #define GDB_ACK                 "+"
+#define GDB_NACK                "-" 
 #define x86_VALID_REGISTERS     10
 #define x86_GDB_REGISTERS       13
 #define x86_MAX_REGISTERS       16

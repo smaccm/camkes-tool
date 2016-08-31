@@ -11,8 +11,6 @@
 #include <endian.h>
 
 static int handle_gdb(void) {
-    // Acknowledge packet
-    gdb_printf(GDB_RESPONSE_START GDB_ACK GDB_RESPONSE_END "\n");
     // Get command and checksum
     int command_length = buf.checksum_index-1;
     char *command_ptr = &buf.data[COMMAND_START];
@@ -30,9 +28,15 @@ static int handle_gdb(void) {
         debug_printf("Checksum error, computed %x,"
                      "received %x received_checksum\n",
                      computed_checksum, received_checksum);
+        // Acknowledge packet
+        gdb_printf(GDB_RESPONSE_START GDB_NACK GDB_RESPONSE_END "\n");
+    } else {
+        // Acknowledge packet
+        gdb_printf(GDB_RESPONSE_START GDB_ACK GDB_RESPONSE_END "\n");
+       // Parse the command
+        handle_command(command); 
     }
-    // Parse the command
-    handle_command(command);
+    
     return 0;
 }
 

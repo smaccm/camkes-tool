@@ -99,6 +99,6 @@ static void gdb_printf(const char *format, ...);
 
 #define debug_printf(format, args...) do { \
     if (DEBUG_PRINT) { \
-        printf(format, ## args); \
+        gdb_printf(format, ## args); \
     } \
 } while(0);
