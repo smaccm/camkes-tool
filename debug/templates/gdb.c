@@ -307,10 +307,10 @@ static void GDB_vcont(char *command) {
 
 static void GDB_continue(char *command) {
     int err = 0;
-    if (step_mode) {
+    if (step_mode && stop_reason < stop_hw_break) {
         err = /*? me.from_instance.name ?*/_resume(tcb_num);
-        step_mode = false;
     }
+    step_mode = false;
     stream_read = false;
     seL4_MessageInfo_t info;
     if (err) {
@@ -337,16 +337,21 @@ static void GDB_continue(char *command) {
 
 static void GDB_step(char *command) {
     int err = 0;
-    if (!step_mode) {
+    if (!step_mode && stop_reason < stop_hw_break) {
+        debug_printf("Entering step mode\n");
         err = /*? me.from_instance.name ?*/_step(tcb_num);
-        step_mode = true;
+    } else {
+        debug_printf("Already in step mode\n");
     }
+    step_mode = true;
     stream_read = false;
     if (err) {
         send_message("E01", 0);
     } else {
         seL4_MessageInfo_t info;
+        debug_printf("stop reason %d\n", stop_reason);
         if (stop_reason >= stop_hw_break) {
+            debug_printf("Debug exception step response\n");
             // If this was a Debug Exception, then we respond with
             // a bp_num and the number of instruction to step
             // Since we're going to step, we set MR1 to 1
@@ -354,6 +359,7 @@ static void GDB_step(char *command) {
             seL4_SetMR(0, 0);
             seL4_SetMR(1, 1);
             seL4_Send(/*? reply_cap_slot ?*/, info);
+            debug_printf("Did response\n");
         } else {
             // If this was a fault, set the instruction pointer to
             // what we expect it to be

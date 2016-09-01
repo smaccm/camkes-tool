@@ -227,7 +227,6 @@ static void write_register(void) {
     // Change relevant register
     reg_word[reg_num] = data;
     err = seL4_TCB_WriteRegisters(tcb_cap, false, 0, num_regs, &regs);
-    printf("Write register val: %08x\n", data);
     // Send IPC
     seL4_MessageInfo_t info = seL4_MessageInfo_new(0, 0, 0, 1);
     if (err) {

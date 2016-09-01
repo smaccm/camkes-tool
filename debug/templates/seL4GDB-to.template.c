@@ -59,6 +59,7 @@ int /*? me.to_interface.name ?*/__run(void) {
     seL4_Word exception_num;
     seL4_Word bp_num;
     seL4_Word length;
+    seL4_Word bp_addr;
     seL4_MessageInfo_t info;
     while (1) {
         info = seL4_Recv(/*? ep ?*/, &tcb_num);
