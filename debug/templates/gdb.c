@@ -350,7 +350,7 @@ static void GDB_step(char *command) {
     } else {
         seL4_MessageInfo_t info;
         debug_printf("stop reason %d\n", stop_reason);
-        if (stop_reason >= stop_hw_break) {
+        if (stop_reason >= stop_sw_break) {
             debug_printf("Debug exception step response\n");
             // If this was a Debug Exception, then we respond with
             // a bp_num and the number of instruction to step

@@ -38,7 +38,7 @@
 /*- include 'gdb.h' -*/
 
 static int handle_command(char* command);
-static void find_stop_reason(seL4_Word exception_num, seL4_Word fault_type, seL4_Word bp_num);
+static void find_stop_reason(seL4_Word fault_type, seL4_Word *args);
 
 static seL4_Word reg_pc;
 static seL4_Word tcb_num;
@@ -61,14 +61,17 @@ int /*? me.to_interface.name ?*/__run(void) {
     seL4_Word length;
     seL4_Word bp_addr;
     seL4_MessageInfo_t info;
+    seL4_Word args[4];
     while (1) {
         info = seL4_Recv(/*? ep ?*/, &tcb_num);
         fault_type = seL4_MessageInfo_get_label(info);
         length = seL4_MessageInfo_get_length(info);
-        // Get the PC relevant registers
-        reg_pc = seL4_GetMR(0);
-        bp_num = seL4_GetMR(1);
-        exception_num = seL4_GetMR(3);
+        for (int i = 0; i < length; i++) {
+            args[i] = seL4_GetMR(i);
+        }
+        // Get the relevant registers
+        reg_pc = args[0];
+        bp_num = args[1];
         debug_printf("Received fault for tcb %u\n", tcb_num);
         debug_printf("Stopped at %08x\n", reg_pc);
         debug_printf("Length: %lu\n", length);
@@ -78,7 +81,7 @@ int /*? me.to_interface.name ?*/__run(void) {
     #else
         seL4_CNode_SaveCaller(/*? cnode ?*/, /*? reply_cap_slot ?*/, 32);
     #endif
-        find_stop_reason(exception_num, fault_type, bp_num);
+        find_stop_reason(fault_type, args);
         // Start accepting GDB input
         stream_read = true;
         serial_irq_reg_callback(serial_irq_rcv, 0);
@@ -86,34 +89,35 @@ int /*? me.to_interface.name ?*/__run(void) {
     UNREACHABLE();
 }
 
-static void find_stop_reason(seL4_Word exception_num, seL4_Word fault_type, seL4_Word bp_num) {
-    if (fault_type == seL4_UserException) {
-        // Read from memory to make sure it's a user added software breakpoint
-        unsigned char byte_check;
-        /*? me.from_instance.name ?*/_read_memory(reg_pc, 1, &byte_check);
-        if (byte_check == x86_SW_BREAK) {
-            // Increment PC
+static void find_stop_reason(seL4_Word fault_type, seL4_Word *args) {
+    if (fault_type == seL4_DebugException) {
+        seL4_Word exception_reason = args[1];
+        debug_printf("MR 0: %08X\n", args[0]);
+        debug_printf("MR 1: %08X\n", args[1]);
+        debug_printf("MR 2: %08X\n", args[2]);
+        debug_printf("MR 3: %08X\n", args[3]);
+        debug_printf("Breakpoint number %lu\n", args[1]);
+        if (exception_reason == seL4_DebugException_Breakpoint || exception_reason == seL4_DebugException_Watchpoint) {
+            send_message("T05thread:01;", 0);
+            stop_reason = stop_watch;
+            debug_printf("Hit watchpoint / breakpoint\n");
+        } else if (exception_reason == seL4_DebugException_SingleStep && step_mode) {
+            send_message("T05thread:01;", 0);
+            stop_reason = stop_step;
+            debug_printf("Did step\n");
+        } else if (exception_reason == seL4_DebugException_SoftwareBreakRequest) {
             reg_pc += 1;
             /*? me.from_instance.name ?*/_write_register(tcb_num, reg_pc, 0);
+            seL4_Word registers[x86_MAX_REGISTERS] = {0};
+            /*? me.from_instance.name ?*/_read_registers(tcb_num, registers);
+            debug_printf("PC now at %08X\n", registers[GDBRegister_eip]);
             send_message("T05thread:01;swbreak:;", 0);
             stop_reason = stop_sw_break;
             debug_printf("Software breakpoint\n");
         } else {
-            debug_printf("Got byte %02x\n", byte_check);
             send_message("T05thread:01;", 0);
             stop_reason = stop_none; 
-            debug_printf("Unknown stop reason, GP fault\n");
-        }
-    } else if (fault_type == seL4_DebugException) {
-        debug_printf("Breakpoint number %lu\n", bp_num);
-        if (step_mode) {
-            send_message("T05thread:01;", 0);
-            stop_reason = stop_step;
-            debug_printf("Did step\n");
-        } else {
-            send_message("T05thread:01;", 0);
-            stop_reason = stop_watch;
-            debug_printf("Hit watchpoint / breakpoint\n");
+            debug_printf("Unknown stop reason\n");
         }
     } else {
         send_message("T05thread:01;\n", 0);
