@@ -307,7 +307,9 @@ static void GDB_vcont(char *command) {
 
 static void GDB_continue(char *command) {
     int err = 0;
-    if (step_mode && stop_reason < stop_hw_break) {
+    // If it's not a step exception, then we can resume
+    // Otherwise, just resume by responding on the step fault
+    if (step_mode && stop_reason != stop_step) {
         err = /*? me.from_instance.name ?*/_resume(tcb_num);
     }
     step_mode = false;
@@ -317,27 +319,30 @@ static void GDB_continue(char *command) {
         send_message("E01", 0);
     } else {
         // Reply to the fault ep to restart the thread
-        if (stop_reason >= stop_hw_break) {
+        if (stop_reason == stop_step) {
             // If this was a Debug Exception, then we respond with
             // a bp_num and the number of instruction to step
-            // Since we're going to continue, we set MR1 to 0
-            info = seL4_MessageInfo_new(0, 0, 0, 2);
+            // Since we're going to continue, we set MR0 to 0
+            info = seL4_MessageInfo_new(0, 0, 0, 1);
             seL4_SetMR(0, 0);
-            seL4_SetMR(1, 0);
             seL4_Send(/*? reply_cap_slot ?*/, info);
-        } else {
+        } else if (stop_reason == stop_none) {
             // If this was a fault, set the instruction pointer to
             // what we expect it to be
             info = seL4_MessageInfo_new(0, 0, 0, 1);
             seL4_SetMR(0, reg_pc);
             seL4_Send(/*? reply_cap_slot ?*/, info);
+        } else {
+            seL4_Signal(/*? reply_cap_slot ?*/);
         }
     }
 }
 
 static void GDB_step(char *command) {
     int err = 0;
-    if (!step_mode && stop_reason < stop_hw_break) {
+    // If it's not a step exception, then we need to set stepping
+    // Otherwise, just step by responding on the step fault
+    if (!step_mode && stop_reason != stop_step) {
         debug_printf("Entering step mode\n");
         err = /*? me.from_instance.name ?*/_step(tcb_num);
     } else {
@@ -349,23 +354,15 @@ static void GDB_step(char *command) {
         send_message("E01", 0);
     } else {
         seL4_MessageInfo_t info;
-        debug_printf("stop reason %d\n", stop_reason);
-        if (stop_reason >= stop_sw_break) {
-            debug_printf("Debug exception step response\n");
-            // If this was a Debug Exception, then we respond with
-            // a bp_num and the number of instruction to step
-            // Since we're going to step, we set MR1 to 1
-            info = seL4_MessageInfo_new(0, 0, 0, 2);
-            seL4_SetMR(0, 0);
-            seL4_SetMR(1, 1);
-            seL4_Send(/*? reply_cap_slot ?*/, info);
-            debug_printf("Did response\n");
-        } else {
+        if (stop_reason == stop_none) {
             // If this was a fault, set the instruction pointer to
             // what we expect it to be
             info = seL4_MessageInfo_new(0, 0, 0, 1);
             seL4_SetMR(0, reg_pc);
             seL4_Send(/*? reply_cap_slot ?*/, info);
+        } else {
+            debug_printf("Responding to some other debug exception\n");
+            seL4_Signal(/*? reply_cap_slot ?*/);
         }
     }
 }

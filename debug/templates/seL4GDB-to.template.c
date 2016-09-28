@@ -55,9 +55,6 @@ void /*? me.to_interface.name ?*/__init(void) {
 
 int /*? me.to_interface.name ?*/__run(void) {
     seL4_Word fault_type;
-    seL4_Word fault_addr;
-    seL4_Word exception_num;
-    seL4_Word bp_num;
     seL4_Word length;
     seL4_Word bp_addr;
     seL4_MessageInfo_t info;
@@ -71,7 +68,7 @@ int /*? me.to_interface.name ?*/__run(void) {
         }
         // Get the relevant registers
         reg_pc = args[0];
-        bp_num = args[1];
+        debug_printf("------------------------------\n");
         debug_printf("Received fault for tcb %u\n", tcb_num);
         debug_printf("Stopped at %08x\n", reg_pc);
         debug_printf("Length: %lu\n", length);
@@ -97,20 +94,24 @@ static void find_stop_reason(seL4_Word fault_type, seL4_Word *args) {
         debug_printf("MR 2: %08X\n", args[2]);
         debug_printf("MR 3: %08X\n", args[3]);
         debug_printf("Breakpoint number %lu\n", args[1]);
-        if (exception_reason == seL4_DebugException_Breakpoint || exception_reason == seL4_DebugException_Watchpoint) {
+        if (exception_reason == seL4_DataBreakpoint) {
             send_message("T05thread:01;", 0);
             stop_reason = stop_watch;
-            debug_printf("Hit watchpoint / breakpoint\n");
-        } else if (exception_reason == seL4_DebugException_SingleStep && step_mode) {
+            debug_printf("Hit watchpoint\n");
+        } else if (exception_reason == seL4_InstructionBreakpoint) {
+            send_message("T05thread:01;", 0);
+            stop_reason = stop_hw_break;
+            debug_printf("Hit breakpoint\n");
+        } else if (exception_reason == seL4_SingleStep && step_mode) {
             send_message("T05thread:01;", 0);
             stop_reason = stop_step;
             debug_printf("Did step\n");
-        } else if (exception_reason == seL4_DebugException_SoftwareBreakRequest) {
-            reg_pc += 1;
-            /*? me.from_instance.name ?*/_write_register(tcb_num, reg_pc, 0);
-            seL4_Word registers[x86_MAX_REGISTERS] = {0};
-            /*? me.from_instance.name ?*/_read_registers(tcb_num, registers);
-            debug_printf("PC now at %08X\n", registers[GDBRegister_eip]);
+        } else if (exception_reason == seL4_SoftwareBreakRequest) {
+            //reg_pc += 1;
+            ///*? me.from_instance.name ?*/_write_register(tcb_num, reg_pc, 0);
+            //seL4_Word registers[x86_MAX_REGISTERS] = {0};
+            ///*? me.from_instance.name ?*/_read_registers(tcb_num, registers);
+            //debug_printf("PC now at %08X\n", registers[GDBRegister_eip]);
             send_message("T05thread:01;swbreak:;", 0);
             stop_reason = stop_sw_break;
             debug_printf("Software breakpoint\n");

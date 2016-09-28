@@ -150,6 +150,7 @@ int /*? me.to_instance.name ?*/_insert_break(seL4_Word tcb_cap,
                                              seL4_Word addr,
                                              seL4_Word size,
                                              seL4_Word rw) {
+#ifdef CONFIG_HARDWARE_DEBUG_API
     seL4_MessageInfo_t info = seL4_MessageInfo_new(GDB_INSERT_BREAK, 
                                                    0, 0, 
                                                    DELEGATE_INSERT_BREAK_NUM_ARGS);
@@ -163,6 +164,14 @@ int /*? me.to_instance.name ?*/_insert_break(seL4_Word tcb_cap,
     seL4_Send(/*? ep ?*/, info);
     info = seL4_Recv(/*? ep ?*/, NULL);
     return seL4_GetMR(0);
+#else
+    (void) tcb_cap;
+    (void) type;
+    (void) addr;
+    (void) size;
+    (void) rw
+    return -1;
+#endif
 }
 
 int /*? me.to_instance.name ?*/_remove_break(seL4_Word tcb_cap,
@@ -170,6 +179,7 @@ int /*? me.to_instance.name ?*/_remove_break(seL4_Word tcb_cap,
                                              seL4_Word addr, 
                                              seL4_Word size,
                                              seL4_Word rw) {
+#ifdef CONFIG_HARDWARE_DEBUG_API
     seL4_MessageInfo_t info = seL4_MessageInfo_new(GDB_REMOVE_BREAK, 
                                                    0, 0,
                                                    DELEGATE_REMOVE_BREAK_NUM_ARGS);
@@ -183,6 +193,14 @@ int /*? me.to_instance.name ?*/_remove_break(seL4_Word tcb_cap,
     seL4_Send(/*? ep ?*/, info);
     info = seL4_Recv(/*? ep ?*/, NULL);
     return seL4_GetMR(0);
+#else
+    (void) tcb_cap;
+    (void) type;
+    (void) addr;
+    (void) size;
+    (void) rw;
+    return -1;
+#endif
 }
 
 int /*? me.to_instance.name ?*/_resume(seL4_Word tcb_cap) {

@@ -20,6 +20,9 @@
 #include <utils/util.h>
 #include <camkes.h>
 
+#ifndef CONFIG_HARDWARE_DEBUG_API
+    #error
+#endif
 /*? macros.show_includes(me.to_instance.type.includes) ?*/
 /*? macros.show_includes(me.to_interface.type.includes, '../static/components/' + me.to_instance.type.name + '/') ?*/
 
@@ -53,7 +56,9 @@ static int get_breakpoint_num(seL4_Word vaddr, seL4_Word type, seL4_Word size, s
 static void set_breakpoint_state(seL4_Word vaddr, seL4_Word type, seL4_Word size, seL4_Word rw, int bp);
 static void clear_breakpoint_state(int bp);
 
-breakpoint_state_t breakpoints[seL4_NumBreakpoints];
+#ifdef CONFIG_HARDWARE_DEBUG_API
+breakpoint_state_t breakpoints[seL4_NumDualFunctionMonitors];
+#endif
 
 int /*? me.to_interface.name ?*/__run(void) {
     breakpoint_init();
@@ -240,6 +245,7 @@ static void write_register(void) {
 
 static void insert_break(void) {
     int err = 0;
+#ifdef CONFIG_HARDWARE_DEBUG_API
     // Get arguments
     seL4_Word tcb_cap = seL4_GetMR(DELEGATE_ARG(0));
     seL4_Word type = seL4_GetMR(DELEGATE_ARG(1));
@@ -269,6 +275,9 @@ static void insert_break(void) {
         printf("rw %d\n", bp.rw);
         printf("bool %d\n", bp.is_enabled);
     }
+#else
+    err = -1;
+#endif
     // Send a reply
     seL4_MessageInfo_t info = seL4_MessageInfo_new(0, 0, 0, 1);
     if (err) {
@@ -281,6 +290,7 @@ static void insert_break(void) {
 
 static void remove_break(void) {
     int err = 0;
+#ifdef CONFIG_HARDWARE_DEBUG_API
     // Get arguments
     seL4_Word tcb_cap = seL4_GetMR(DELEGATE_ARG(0));
     seL4_Word type = seL4_GetMR(DELEGATE_ARG(1));
@@ -297,6 +307,9 @@ static void remove_break(void) {
     if (!err) {
         clear_breakpoint_state(bp_num);
     }
+#else
+    err = -1;
+#endif
     // Send a reply
     seL4_MessageInfo_t info = seL4_MessageInfo_new(0, 0, 0, 1);
     if (err) {
@@ -338,6 +351,7 @@ static int check_write_memory(seL4_Word addr) {
 }
 
 static void resume(void) {
+#ifdef CONFIG_HARDWARE_DEBUG_API
     seL4_Word tcb_cap = seL4_GetMR(DELEGATE_ARG(0));
     seL4_TCB_ConfigureSingleStepping_t result = 
         seL4_TCB_ConfigureSingleStepping(tcb_cap, 0, 0);
@@ -348,10 +362,15 @@ static void resume(void) {
     } else {
         seL4_SetMR(0, 0);
     }
+#else
+    seL4_MessageInfo_t info = seL4_MessageInfo_new(0, 0, 0, 1);
+    seL4_SetMR(0, 0);
+#endif
     seL4_Send(/*? ep ?*/, info);
 }
 
 static void step(void) {
+#ifdef CONFIG_HARDWARE_DEBUG_API
     seL4_Word tcb_cap = seL4_GetMR(DELEGATE_ARG(0));
     seL4_TCB_ConfigureSingleStepping_t result = 
         seL4_TCB_ConfigureSingleStepping(tcb_cap, 0, 1);
@@ -362,33 +381,45 @@ static void step(void) {
     } else {
         seL4_SetMR(0, 0);
     }
+#else
+    seL4_MessageInfo_t info = seL4_MessageInfo_new(0, 0, 0, 1);
+    seL4_SetMR(0, 1);
+#endif
     seL4_Send(/*? ep ?*/, info);
 }
 
 static void breakpoint_init(void) {
-    for (int i = 0; i < seL4_NumBreakpoints; i++) {
+#ifdef CONFIG_HARDWARE_DEBUG_API
+    for (int i = 0; i < seL4_NumDualFunctionMonitors; i++) {
         breakpoints[i].vaddr = 0;
         breakpoints[i].type = 0;
         breakpoints[i].size = 0;
         breakpoints[i].rw = 0;
         breakpoints[i].is_enabled = false;
     }
+#endif
 }
 
 static int find_free_breakpoint(void) {
+#ifdef CONFIG_HARDWARE_DEBUG_API
     int bp = -1;
-    for (int i = 0; i < seL4_NumBreakpoints; i++) {
+    for (int i = 0; i < seL4_NumDualFunctionMonitors; i++) {
         if (!breakpoints[i].is_enabled) {
             bp = i;
             break;
         }
     }
     return bp;
+#else
+    return -1;
+#endif
 }
 
-static int get_breakpoint_num(seL4_Word vaddr, seL4_Word type, seL4_Word size, seL4_Word rw) {
+static int get_breakpoint_num(seL4_Word vaddr, seL4_Word type,
+                              seL4_Word size, seL4_Word rw) {
+#ifdef CONFIG_HARDWARE_DEBUG_API
     int bp = -1;
-    for (int i = 0; i < seL4_NumBreakpoints; i++) {
+    for (int i = 0; i < seL4_NumDualFunctionMonitors; i++) {
         if (breakpoints[i].is_enabled && breakpoints[i].vaddr == vaddr &&
             breakpoints[i].type == type && breakpoints[i].size == size &&
             breakpoints[i].rw == rw) {
@@ -397,20 +428,40 @@ static int get_breakpoint_num(seL4_Word vaddr, seL4_Word type, seL4_Word size, s
         }
     }
     return bp;
+#else
+    (void) vaddr;
+    (void) type;
+    (void) size;
+    (void) rw;
+    return -1;
+#endif
 }
 
-static void set_breakpoint_state(seL4_Word vaddr, seL4_Word type, seL4_Word size, seL4_Word rw, int bp) {
+static void set_breakpoint_state(seL4_Word vaddr, seL4_Word type,
+                                 seL4_Word size, seL4_Word rw, int bp) {
+#ifdef CONFIG_HARDWARE_DEBUG_API
     breakpoints[bp].vaddr = vaddr;
     breakpoints[bp].type = type;
     breakpoints[bp].size = size;
     breakpoints[bp].rw = rw;
     breakpoints[bp].is_enabled = true;
+#else
+    (void) vaddr;
+    (void) type;
+    (void) size;
+    (void) rw;
+    (void) bp;
+#endif
 }
 
 static void clear_breakpoint_state(int bp) {
+#ifdef CONFIG_HARDWARE_DEBUG_API
     breakpoints[bp].vaddr = 0;
     breakpoints[bp].type = 0;
     breakpoints[bp].size = 0;
     breakpoints[bp].rw = 0;
     breakpoints[bp].is_enabled = false;
+#else
+    (void) bp;
+#endif
 }
