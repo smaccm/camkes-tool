@@ -98,7 +98,6 @@ int /*? me.to_interface.name ?*/__run(void) {
                 step();
                 break;
             default:
-                printf("Unrecognised command %d %d %d\n", instruction, seL4_GetMR(1), seL4_GetMR(2));
                 info = seL4_MessageInfo_new(0, 0, 0, 1);
                 seL4_Send(/*? ep ?*/, info);
                 continue;
@@ -188,8 +187,6 @@ static void read_register(void) {
     seL4_Word reg_num = seL4_GetMR(DELEGATE_ARG(1));
     seL4_TCB_ReadRegisters(tcb_cap, false, 0, num_regs, &regs);
     seL4_Word *reg_word = (seL4_Word *) (& regs);
-    printf("Getting register %d\n", reg_num);
-    printf("Value %08x\n", reg_word[reg_num]);
     seL4_MessageInfo_t info = seL4_MessageInfo_new(0, 0, 0, 1);
     seL4_SetMR(0, reg_word[reg_num]);
     seL4_Send(/*? ep ?*/, info);
@@ -204,7 +201,6 @@ static void write_registers(void) {
     int num_regs = sizeof(seL4_UserContext) / sizeof(seL4_Word);
     for (int i = 0; i < num_regs; i++) {
         reg_word[i] = seL4_GetMR(DELEGATE_ARG(i+1));
-        printf("%d 0x%x\n", i, reg_word[i]);
     }
     // Write registers
     err = seL4_TCB_WriteRegisters(tcb_cap, false, 0, num_regs, &regs);
@@ -258,22 +254,12 @@ static void insert_break(void) {
         err = 1;
     } else {
         // Set the breakpoint
-        printf("DELEGATE: Setting breakpoint at %08x, type %d, rw %d, size %d, num %d\n",
-                addr, type, rw, size, bp_num);
         err = seL4_TCB_SetBreakpoint(tcb_cap, (seL4_Uint16) bp_num, addr,
                                      type, size, rw);
         if (!err) {
             set_breakpoint_state(addr, type, size, rw, bp_num);
         }
-        printf("error %d\n", err);
-        printf("Cap %d\n", tcb_cap);
         seL4_TCB_GetBreakpoint_t bp = seL4_TCB_GetBreakpoint(tcb_cap, bp_num);
-        printf("err: %d\n", bp.error);
-        printf("vaddr %08x\n", bp.vaddr);
-        printf("type %d\n", bp.type);
-        printf("size %d\n", bp.size);
-        printf("rw %d\n", bp.rw);
-        printf("bool %d\n", bp.is_enabled);
     }
 #else
     err = -1;
