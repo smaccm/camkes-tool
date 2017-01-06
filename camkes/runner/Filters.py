@@ -560,7 +560,7 @@ def replace_dma_frames(ast, obj_space, elfs, options, **_):
             dma_frame = dma_frames[0]
             return dma_frame
 
-        #replace_large_frames(obj_space, arch, pd, base, sz)
+        replace_large_frames(obj_space, arch, pd, base, sz)
 
         for page_vaddr in six.moves.range(base, base + sz, page_size):
             cap = Cap(get_dma_frame(dma_frame_index), True, True, False)
