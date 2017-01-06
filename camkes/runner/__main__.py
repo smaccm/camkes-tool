@@ -616,6 +616,7 @@ def main(argv, out, err):
         # is just an optimisation and the conditional can be removed if
         # desired.
         for f in CAPDL_FILTERS:
+            print(f)
             try:
                 # Pass everything as named arguments to allow filters to
                 # easily ignore what they don't want.
